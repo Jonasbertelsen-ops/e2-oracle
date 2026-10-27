@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#06181F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="E2 Model">
+<meta name="format-detection" content="telephone=no">
+<title>E2 Model</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Oswald:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --base:#040C10; --bg:#06181F; --card:rgba(7,9,12,0.88); --surface:#0B2129;
+  --tint:rgba(42,138,143,0.10); --text:#EAF4F8; --muted:#9FBAC6; --faint:#5F7A86;
+  --border:rgba(77,184,217,0.16); --border-strong:rgba(77,184,217,0.38);
+  --accent:#4DB8D9; --teal:#2A8A8F; --red:#D92E3A; --steel:#5D7488;
+  --violet:#5B4FA8; --yellow:#F0C040;
+  --mono:'Space Mono',ui-monospace,Menlo,monospace;
+  --num:'Oswald',var(--mono);
+  --body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,Roboto,sans-serif;
+  --hshadow:0 3px 9px rgba(2,3,5,0.98),0 0 30px rgba(2,3,5,0.95),0 0 60px rgba(2,3,5,0.8);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0;background:var(--base);color:var(--text);font-family:var(--body);font-size:17px;line-height:1.4}
+body{padding-top:env(safe-area-inset-top,0px);min-height:100%}
+#fog{position:fixed;inset:0;z-index:-2;background:
+  radial-gradient(60% 55% at 82% 8%, rgba(14,74,92,0.95) 0, rgba(14,74,92,0.55) 35%, rgba(6,24,31,0) 70%),
+  radial-gradient(70% 70% at 95% 45%, rgba(42,138,143,0.28) 0, rgba(6,24,31,0) 65%),
+  radial-gradient(90% 80% at 10% 95%, #020608 0, rgba(2,6,8,0.6) 45%, rgba(6,24,31,0) 75%),
+  linear-gradient(200deg, #0E4A5C 0, #083040 35%, #06181F 60%, #030A0E 100%)}
+#fog::after{content:"";position:absolute;inset:-20%;opacity:.55;background:
+  radial-gradient(45% 45% at 30% 20%, rgba(42,138,143,0.22) 0, rgba(6,24,31,0) 70%),
+  radial-gradient(40% 40% at 70% 80%, rgba(14,74,92,0.30) 0, rgba(6,24,31,0) 70%);
+  animation:drift 48s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate3d(-3%,-2%,0) scale(1.05)}to{transform:translate3d(4%,3%,0) scale(1.12)}}
+@media (prefers-reduced-motion:reduce){#fog::after{animation:none}}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;padding:14px 16px 10px;
+  background:linear-gradient(180deg,rgba(4,12,16,0.92),rgba(4,12,16,0.0));backdrop-filter:blur(8px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:11;
+  background:rgba(4,12,16,0.92);backdrop-filter:blur(8px)}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--mono);font-weight:700;font-size:20px;letter-spacing:.3em;text-transform:uppercase;margin:2px 0 0;text-shadow:var(--hshadow)}
+main{padding:4px 16px calc(96px + env(safe-area-inset-bottom,0px));max-width:620px;margin:0 auto}
+.view{display:none;animation:fade .2s ease}
+.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin:12px 0}
+.card h2{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+h3{font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:.18em;text-transform:uppercase;margin:16px 0 6px}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.lab{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.big{font-family:var(--num);font-weight:600;font-size:30px;color:var(--accent);text-shadow:0 0 18px rgba(77,184,217,0.45);line-height:1}
+.unit{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.1em}
+.state{font-family:var(--mono);font-weight:700;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--text)}
+.sub{font-size:14px;color:var(--muted)}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.mono{font-family:var(--mono)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.divider{height:1px;background:var(--border);margin:12px 0}
+
+.i{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;
+  border:1px solid var(--border-strong);color:var(--accent);font-family:var(--mono);font-size:11px;
+  background:transparent;cursor:pointer;flex:0 0 auto}
+.alert{border-color:var(--yellow);
+  background:linear-gradient(180deg,rgba(240,192,64,0.10),rgba(240,192,64,0.02)),rgba(7,9,12,0.88)}
+.alert h2{color:var(--yellow)}
+.alert .state{color:var(--yellow)}
+.notice{border-left:3px solid var(--border-strong);padding:6px 0 6px 12px;margin:10px 0;color:var(--muted);font-size:14px}
+.notice.warn{border-left-color:var(--yellow)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--border)}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700}
+td.n{font-family:var(--num);color:var(--text)}
+tr.conflict td{color:var(--yellow)}
+
+button.act{min-height:52px;width:100%;border-radius:12px;border:1px solid var(--border-strong);
+  background:transparent;color:var(--text);font-family:var(--mono);font-weight:700;font-size:13px;
+  letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:0 14px}
+button.primary{background:var(--accent);color:#07090C;border-color:var(--accent);box-shadow:0 0 24px rgba(77,184,217,0.35)}
+button.sm{min-height:44px;font-size:12px;letter-spacing:.14em}
+input,select{width:100%;min-height:52px;background:var(--surface);color:var(--text);border:1px solid var(--border);
+  border-radius:12px;padding:0 14px;font-family:var(--body);font-size:16px}
+textarea{width:100%;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;font-family:var(--body);font-size:16px;min-height:72px;resize:vertical}
+label.fl{display:block;margin:12px 0 4px}
+.field-lab{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.chip{flex:1 1 30%;min-height:52px;display:flex;align-items:center;justify-content:center;text-align:center;
+  border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--muted);
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;padding:0 8px}
+.chip.sel{border-color:var(--accent);color:var(--accent);background:var(--tint);box-shadow:0 0 16px rgba(77,184,217,0.25)}
+
+nav{position:fixed;left:0;right:0;bottom:0;z-index:12;display:flex;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:rgba(4,12,16,0.92);backdrop-filter:blur(14px);border-top:1px solid var(--border)}
+nav button{flex:1;background:transparent;border:0;border-top:2px solid transparent;color:var(--faint);
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;padding:12px 2px 14px;cursor:pointer}
+nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0 14px rgba(77,184,217,0.55)}
+
+.sheet-bg{position:fixed;inset:0;z-index:20;background:rgba(2,6,8,0.7);display:none;align-items:flex-end}
+.sheet-bg.on{display:flex}
+.sheet{width:100%;max-width:620px;margin:0 auto;background:var(--surface);border-top:1px solid var(--border-strong);
+  border-radius:16px 16px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow:auto}
+.sheet h4{font-family:var(--mono);font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+.sheet p{margin:8px 0;font-size:15px;color:var(--text)}
+.sheet .k{color:var(--muted);font-family:var(--mono);font-size:12px}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:999px;padding:10px 18px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+  z-index:30;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.on{opacity:1}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
+  border:1px solid var(--border);border-radius:999px;padding:2px 8px;display:inline-block}
+.list-row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
+.menu-btn{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:56px;margin:8px 0;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:0 16px;color:var(--text);
+  font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.menu-btn span{color:var(--faint)}
+</style>
+</head>
+<body>
+<div id="fog"></div>
+<header>
+  <div class="kicker" id="hdate">E2 model</div>
+  <h1 id="htitle">Now</h1>
+</header>
+<main>
+  <section id="v-estrogen" class="view on"></section>
+  <section id="v-test" class="view"></section>
+  <section id="v-log" class="view"></section>
+  <section id="v-data" class="view"></section>
+</main>
+<nav>
+  <button data-v="estrogen" class="on">Estrogen</button>
+  <button data-v="test">Testost.</button>
+  <button data-v="log">Log</button>
+  <button data-v="data">Data</button>
+</nav>
+<div class="sheet-bg" id="sheetbg"><div class="sheet" id="sheet"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const LN2=Math.LN2;
+
+/* ============================ MODEL (literature, fixed) ============================ */
+const M={
+  SCALE:2.2161099603352783,               // FITTED: pins total T=90 nmol/L on 21.10.2026 16:00 (re-pinned 25.10.2026 for the two-part enanthate release)
+  ester:{
+    TE:{kr:LN2/4.0, ke:LN2/0.131, tfrac:288.4/400.6,    // t1/2 4.0d (agreed base), rise 0.131d, DERIVED peak 16h
+        f:0.7963, h1:3.521, h2:14.148},                   // release in two parts: 80% with 3.5 d, 20% with 14.1 d (each a constant half-life), fitted so the weekly fall matches Di Luigi's flattening (4.25, 5.8, 7.8 d) scaled to the 4.0 d base, while the first week keeps its 4.0 d pace
+    TP:{kr:LN2/(25/24), ke:LN2/0.056, tfrac:288.4/344.5},// t1/2 25h, rise 0.056d, DERIVED peak 6h
+    TU:{kr:LN2/31.0, ke:LN2/1.534, tfrac:288.4/456.7}    // t1/2 31d, rise 1.534d, DERIVED peak 7.0d
+  },
+  KF:1.4, FCAP:5.3, FB2:1, AF:261,                       // E2 conversion on FREE testosterone (nmol/L) at your SHBG: half maximum at free T 1.4, set so a doubling of T gives ~40% more E2 (Lakshman 2010 main finding); above free T 5.3, beyond the study's measured range, it levels off further; AF scales to 112 pmol/L at total T 30, SHBG 9
+  FATREF:18.6, FATPER10:1.02,                            // body fat: +2% E2 per 10 points of body fat, same study (fixed, not learned)
+  Imax:0.74, L50:0.22,                                   // anastrozole block, literature start (learned)
+  aiHL:46.8, aiHLmin:30, aiHLmax:48,                     // anastrozole half-life, hours (Mauras, males), literature start (learned within 30 to 48)
+  pmolPerPg:3.6713,
+  shbg:9, alb:4.3, Kt:1e9, Kalb:3.6e4,                   // Vermeulen free-T
+  refDate:"2026-10-16T16:00",                            // anchor reference day (16:00 default time rule)
+  ratio:{crbe:0.799, besw:0.958, swhi:1.056, hiov:1.181} // state cutoffs = ratio x anchor
+};
+const STATE=[
+ {k:"crashed",   name:"Crashed",   desc:"Acute anxiety, sense of doom, adrenaline, chills, flu-like."},
+ {k:"below",     name:"Low",     desc:"Flat, dry, dull. Something is missing, not quite content."},
+ {k:"sweet_spot",name:"Sweet spot",desc:"Present, energetic, motivated. Opioids and methylphenidate work, libido normal."},
+ {k:"high_end",  name:"High",  desc:"Emotional, cries easily, nurturing, slight agitation, functional."},
+ {k:"over",      name:"Above ceiling",      desc:"Dreamy, bubble fog, not present, drugs blunted, libido down, dull nagging anxiety."}
+];
+const SNAME=k=>(STATE.find(s=>s.k===k)||{name:k}).name;
+const LOG_NAME={crashed:"Crashed", below:"Low", sweet_spot:"Sweet spot", high_end:"High", over:"Above ceiling"};   // what you log: named by what you can feel
+const LNAME=k=>LOG_NAME[k]||k;
+/* population normal range for men, measured by mass spectrometry (LC-MS/MS).
+   hi 150: Frederiksen 2020 (772 males, Denmark, 50 to 150), agrees with commercial LC-MS lab ranges (147) and Verdonk 2019 (136).
+   lo 40: the studies disagree at the bottom (12, 37, 50), so 40 is the middle of that spread and bandLo/bandHi draw the spread as grey.
+   typical man 92 pmol/L, middle half 73 to 114 (Framingham, 1148 men, LC-MS/MS; Western Australia mean 95). */
+const NORM={lo:40, hi:150, bandLo:12, bandHi:50, typLo:73, typHi:114, typMid:92};
+const normName=e=>e<NORM.lo?"Low":e>NORM.hi?"High":"Normal";
+
+const _msCache=new Map();
+const ms=s=>{ if(typeof s!=="string") return new Date(s).getTime(); let v=_msCache.get(s); if(v===undefined){ v=new Date(s).getTime(); if(_msCache.size>20000) _msCache.clear(); _msCache.set(s,v); } return v; };   // timestamps parsed once, then remembered
+const days=(a,b)=>(a-b)/86400000;
+const hours=(a,b)=>(a-b)/3600000;
+const pg=p=>p/M.pmolPerPg;
+
+function shape(es,d){ if(d<=0)return 0; const {kr,ke}=M.ester[es];
+  return (kr*ke/(ke-kr))*(Math.exp(-kr*d)-Math.exp(-ke*d)); }
+
+function Tcomp(t, hl){ // hl optional {TE,TU,TP} half-life override (chart band); else corrected half-lives
+  const H = hl || effHalf();
+  const c={TE:0,TP:0,TU:0};
+  for(const x of DATA.inj){
+    const d=days(t,ms(x.t)); if(d<=0)continue;
+    const es=M.ester[x.ester], ke=es.ke;
+    const bat=hl=>{ const kr=LN2/hl; return (kr*ke/(ke-kr))*(Math.exp(-kr*d)-Math.exp(-ke*d)); };
+    if(x.ester==="TE"){ const r=H.TE/4.0;   // both parts move with the corrected or banded half-life
+      c.TE+=es.tfrac*x.mg*(es.f*bat(es.h1*r)+(1-es.f)*bat(es.h2*r)); }
+    else c[x.ester]+=es.tfrac*x.mg*bat(H[x.ester]);
+  }
+  const S=effScale();
+  return {total:S*(c.TE+c.TP+c.TU), TE:S*c.TE, TP:S*c.TP, TU:S*c.TU};
+}
+const Tat=(t,hl)=>Tcomp(t,hl).total;
+
+const AI_ONSET_HALF=0.9; // h; bundles ~2 h drug absorption + estradiol clearing, effect peaks ~5 h not at the timestamp
+function aiLoad(t, elimHL, extra){ // anastrozole effect on board, mg, with onset ramp instead of an instant step
+  const ke=LN2/elimHL, ka=LN2/AI_ONSET_HALF, f=ka/(ka-ke), doses=extra?DATA.ai.concat(extra):DATA.ai; let L=0;
+  for(const x of doses){ const h=hours(t,ms(x.t)); if(h<0)continue; L+=x.mg*f*(Math.exp(-ke*h)-Math.exp(-ka*h)); }
+  return L;
+}
+function Lat(t, extra){ return aiLoad(t, M.aiHL, extra); }
+function fatFactor(t){ const bf=bodyfatAt(t); return bf==null?1:Math.pow(M.FATPER10,(bf-M.FATREF)/10); }
+function convF(f){ const g=x=>x/(M.KF+x); if(f<=M.FCAP) return g(f);   // study shape where the study measured
+  const slope=M.KF/((M.KF+M.FCAP)**2), d=f-M.FCAP; return g(M.FCAP)+slope*M.FB2*d/(M.FB2+d); }   // beyond it: continues, then levels off
+function prodE(T,t){ if(!(T>0)) return 0; const sh=t==null?M.shbg:shbgAt(t), f=T*freeT(T,sh)/100; return M.AF*convF(f)*fatFactor(t); }   // estradiol made from free testosterone, before anastrozole
+function E2at(t, opt){ // opt {extra, Imax, L50, T, aiHL}
+  opt=opt||{};
+  const T=(opt.T!=null)?opt.T:Tat(t);
+  const L=(opt.aiHL!=null)?aiLoad(t,opt.aiHL,opt.extra):Lat(t,opt.extra);
+  const Imax=(opt.Imax!=null)?opt.Imax:M.Imax, L50=(opt.L50!=null)?opt.L50:M.L50;
+  const prod=prodE(T,t);
+  const block=1-Imax*L/(L+L50);
+  return prod*block;
+}
+function freeT(TT,shbg){ // Vermeulen quadratic, % free
+  const T=TT*1e-9, S=shbg*1e-9, albmol=M.alb*10/66500;
+  const N=M.Kalb*albmol+1, A=N*M.Kt, B=N+M.Kt*(S-T), C=-T;
+  const F=(-B+Math.sqrt(B*B-4*A*C))/(2*A);
+  return 100*F/T;
+}
+
+/* ----- anchors, cutoffs, states ----- */
+function cutoffs(anchor,R){ R=R||M.ratio; return {
+  crbe:R.crbe*anchor, besw:R.besw*anchor,
+  swhi:R.swhi*anchor, hiov:R.hiov*anchor }; }
+function stateOf(e,cut){
+  if(e<cut.crbe)return "crashed"; if(e<cut.besw)return "below";
+  if(e<cut.swhi)return "sweet_spot"; if(e<cut.hiov)return "high_end"; return "over"; }
+function bandOf(k,cut){
+  const lo={crashed:0,below:cut.crbe,sweet_spot:cut.besw,high_end:cut.swhi,over:cut.hiov}[k];
+  const hi={crashed:cut.crbe,below:cut.besw,sweet_spot:cut.swhi,high_end:cut.hiov,over:null}[k];
+  return [lo,hi];
+}
+const anchorModel=()=>E2at(ms(M.refDate));
+
+/* ----- learning engine ----- */
+const SUPER_SURE=3;          // a super sure log counts 3x on the scale (was 5x; changed 25.10 at Jonas's request: it pins a point, not the width)
+const UNSURE_TOL=0.03;       // an unsure log is kept if it sits within 3% of where the sure logs put you
+const MIN_W=0.03;           // every state keeps at least 3% of the sweet spot in width, so contradictory logs cannot squeeze a range to nothing
+const CONFLICT_MARGIN=0.02;  // a Low or High log contradicts a sweet spot log when it sits the wrong way round by more than 2%
+const WIN={sweet_spot:10, below:8, high_end:8, crashed:8, over:8};   // sliding windows: your last 10 sweet spot logs, last 8 of each other state
+const DRUG_FULL=10;          // anastrozole strength and clearance: fully yours after 10 real-time logs (each counts once, super sure too), then every log counts the same forever
+const START_MID={below:2*M.ratio.besw-1, high_end:2*M.ratio.swhi-1};   // starting middles for Low and High, set so the first lines sit at 96% and 106%
+const conf=r=>r.superSure?SUPER_SURE:1;
+const confRank=r=>(r.superSure?2:(r.sure===false?0:1))*2+(r.timeDefault?0:1);   // confidence first; at equal confidence a log with a real time outranks one with a guessed time
+function anchorSeries(k){ const live=Math.round(hisParams().anchor), arr=(DATA.anchorLog||[]).map(s=>s.a);
+  if(!arr.length||arr[arr.length-1]!==live) arr.push(live);   // always end on the current live value so it matches
+  return arr.slice(-k); }
+function snapshotAnchor(force){ if(!DATA.anchorLog)DATA.anchorLog=[]; const n=DATA.reports.length;
+  if(!force && n%10!==0) return;
+  const last=DATA.anchorLog[DATA.anchorLog.length-1];
+  if(last&&last.n===n) return;
+  DATA.anchorLog.push({n, a:Math.round(hisParams().anchor)}); }
+const ratioMap=R=>({crashed:[0,R.crbe],below:[R.crbe,R.besw],sweet_spot:[R.besw,R.swhi],high_end:[R.swhi,R.hiov],over:[R.hiov,1e9]});
+const ARATIO=ratioMap(M.ratio);
+function isStartDay(r){ return r.state==="sweet_spot" && r.t===M.refDate; }   // 16.10 counts once: as the start, not again as a log
+function weight(){ return hisParams().w; }
+function fitLevel(rows, startE, startW, AR){ AR=AR||ARATIO;   // weighted votes in log space: start + every log; returns the sweet spot level A (pmol/L)
+  const lnS=Math.log(startE), n=rows.length, W=new Float64Array(n), P=new Float64Array(n), LO=new Float64Array(n), HI=new Float64Array(n), SW=new Uint8Array(n);
+  for(let i=0;i<n;i++){ const x=rows[i], le=Math.log(x.e); W[i]=x.w;   // logs and limits computed once, not on every step of the search
+    if(x.k==="sweet_spot"){ SW[i]=1; P[i]=le; continue; }
+    const b=AR[x.k]; LO[i]=b[1]>=1e9?-Infinity:le-Math.log(b[1]); HI[i]=b[0]<=0?Infinity:le-Math.log(b[0]); }
+  const cost=lnA=>{ let c=startW*(lnA-lnS)**2;
+    for(let i=0;i<n;i++){ if(SW[i]){ const d=lnA-P[i]; c+=W[i]*d*d; continue; }
+      if(lnA<LO[i]){ const d=LO[i]-lnA; c+=W[i]*d*d; } else if(lnA>HI[i]){ const d=lnA-HI[i]; c+=W[i]*d*d; } }
+    return c; };
+  let a=lnS-1.5, b=lnS+1.5;
+  for(let i=0;i<30;i++){ const m1=a+(b-a)/3, m2=b-(b-a)/3; if(cost(m1)<=cost(m2)) b=m2; else a=m1; }   // 30 steps: precise to 0.01%
+  const lnA=(a+b)/2; return {A:Math.exp(lnA), cost:cost(lnA)}; }
+const _drugMemo=new Map();
+function fitDrug(logs){ const key=REV+"|"+logs.map(r=>r.t+r.state).sort().join(",");
+  if(_drugMemo.has(key)) return _drugMemo.get(key); if(_drugMemo.size>20) _drugMemo.clear();
+  const v=fitDrugRaw(logs); _drugMemo.set(key,v); return v; }
+function fitDrugRaw(logs){   // anastrozole strength and clearance: the combination where your timed logs fit best (every log counts 1, no fading)
+  const ordered=logs.slice().sort((x,y)=>ms(x.t)-ms(y.t)), n=ordered.length, tRef=ms(M.refDate);
+  const HLS=[]; for(let h=M.aiHLmin;h<=M.aiHLmax+1e-9;h+=2) HLS.push(h); if(!HLS.includes(M.aiHL)) HLS.push(M.aiHL);
+  // everything that does not depend on the anastrozole values is computed once
+  const K=ordered.map(r=>r.state), lnP=new Float64Array(n), LH={}, W=new Float64Array(n).fill(1);
+  for(let i=0;i<n;i++){ const t=ms(ordered[i].t); lnP[i]=Math.log(prodE(Tat(t),t)); }
+  for(const h of HLS){ const a=new Float64Array(n); for(let i=0;i<n;i++) a[i]=aiLoad(ms(ordered[i].t),h); LH[h]=a; }
+  const refP=prodE(Tat(tRef),tRef), refL=Object.fromEntries(HLS.map(h=>[h,aiLoad(tRef,h)]));
+  const OFFLO={}, OFFHI={}; for(const k of ["crashed","below","high_end","over"]){ const bb=ARATIO[k]; OFFLO[k]=bb[1]>=1e9?null:Math.log(bb[1]); OFFHI[k]=bb[0]<=0?null:Math.log(bb[0]); }
+  const P=new Float64Array(n), LO=new Float64Array(n), HI=new Float64Array(n), SW=new Uint8Array(n);
+  for(let i=0;i<n;i++) SW[i]=K[i]==="sweet_spot"?1:0;
+  const evalP=(im,l5,hl)=>{ const L=LH[hl];
+    for(let i=0;i<n;i++){ const le=lnP[i]+Math.log(1-im*L[i]/(L[i]+l5));
+      if(SW[i]){ P[i]=le; continue; } const k=K[i]; LO[i]=OFFLO[k]==null?-Infinity:le-OFFLO[k]; HI[i]=OFFHI[k]==null?Infinity:le-OFFHI[k]; }
+    const lnS=Math.log(refP*(1-im*refL[hl]/(refL[hl]+l5)));
+    const cost=lnA=>{ let c=4*(lnA-lnS)**2; for(let i=0;i<n;i++){ if(SW[i]){ const d=lnA-P[i]; c+=W[i]*d*d; continue; }
+        if(lnA<LO[i]){ const d=LO[i]-lnA; c+=W[i]*d*d; } else if(lnA>HI[i]){ const d=lnA-HI[i]; c+=W[i]*d*d; } } return c; };
+    let a=lnS-1.5, b=lnS+1.5; for(let j=0;j<30;j++){ const m1=a+(b-a)/3, m2=b-(b-a)/3; if(cost(m1)<=cost(m2)) b=m2; else a=m1; }
+    return cost((a+b)/2); };
+  let best={Imax:M.Imax,L50:M.L50,aiHL:M.aiHL,cost:Infinity};
+  const tryP=(im,l5,hl)=>{ const c=evalP(im,l5,hl)+1e-4*((im-M.Imax)**2+(l5-M.L50)**2+((hl-M.aiHL)/18)**2);
+    if(c<best.cost) best={Imax:im,L50:l5,aiHL:hl,cost:c}; };
+  if(n){ const HC=HLS.filter((h,i)=>i%3===0||h===M.aiHL);   // coarse pass, then a fine pass around the best
+    for(let im=0.55;im<=0.921;im+=0.06) for(let l5=0.12;l5<=0.401;l5+=0.07) for(const hl of HC) tryP(im,l5,hl);
+    const b0=best;
+    for(let im=b0.Imax-0.06;im<=b0.Imax+0.0601;im+=0.02) for(let l5=b0.L50-0.06;l5<=b0.L50+0.0601;l5+=0.02) for(const hl of HLS.filter(h=>Math.abs(h-b0.aiHL)<=6))
+      if(im>=0.55&&im<=0.92&&l5>=0.12&&l5<=0.40) tryP(im,l5,hl); }
+  return best; }
+const eAt=(r,p)=>E2at(ms(r.t),{Imax:p.Imax,L50:p.L50,aiHL:p.aiHL});
+function buildScale(logs,p,startE){   // your scale: middles from your logs, lines between them
+  const byT=logs.slice().sort((x,y)=>ms(x.t)-ms(y.t));
+  const win=k=>byT.filter(r=>r.state===k).slice(-WIN[k]).map(r=>({r,e:eAt(r,p),m:conf(r)}));
+  const avg=(xs,k,startVal)=>{ const empty=Math.max(0,WIN[k]-xs.length), sm=xs.reduce((a,x)=>a+x.m,0);   // empty places in the window hold the starting middle
+    return {mid:(xs.reduce((a,x)=>a+x.m*x.e,0)+empty*startVal)/(sm+empty), share:sm/(sm+empty)}; };
+  const S=win("sweet_spot"), s=avg(S,"sweet_spot",startE), refVal=anchorModel();
+  const A=Math.min(refVal*1.6,Math.max(refVal*0.6,s.mid)), railed=A!==s.mid;   // plausibility rails: 60 to 160% of the literature anchor
+  const Lw=win("below"), Hw=win("high_end"), Cw=win("crashed"), Ow=win("over");
+  const lowMid=avg(Lw,"below",A*START_MID.below).mid, highMid=avg(Hw,"high_end",A*START_MID.high_end).mid;
+  let besw=Math.min((lowMid+A)/2,A*0.99), swhi=Math.max((A+highMid)/2,A*1.01);   // lines beside the sweet spot: halfway between neighbouring middles
+  // ...but a line always moves to take in a log that lands on its wrong side, same rule as the outer lines
+  const ext=(xs,f)=>xs.length?xs.reduce((a,x)=>f(x.e,a.e)?x:a):null;   // the log furthest toward the line, with its confidence
+  const swLo=ext(S,(a,b)=>a<b), swHi=ext(S,(a,b)=>a>b), loHi=ext(Lw,(a,b)=>a>b), hiLo=ext(Hw,(a,b)=>a<b);
+  const settle=(below,above,line)=>{   // below: furthest log that must stay under the line; above: furthest that must stay over it
+    if(below&&above&&below.e>=above.e){ const cb=confRank(below.r), ca=confRank(above.r);   // they overlap: the more confident log keeps its side, a tie splits the difference
+      return cb>ca ? below.e*1.001 : ca>cb ? above.e*0.999 : (below.e+above.e)/2; }
+    if(above&&above.e<line) line=above.e*0.999; if(below&&below.e>=line) line=below.e*1.001; return line; };
+  besw=settle(loHi,swLo,besw); swhi=settle(swHi,hiLo,swhi);
+  besw=Math.min(besw,A*(1-MIN_W/2)); swhi=Math.max(swhi,A*(1+MIN_W/2));   // sweet spot keeps at least 3% width
+  besw=Math.min(besw,A*0.99); swhi=Math.max(swhi,A*1.01);
+  // outer tipping lines: start at 80% and 118% of the sweet spot, move only when a log lands on the wrong side
+  let crbe=settle(ext(Cw,(a,b)=>a>b),ext(Lw,(a,b)=>a<b),A*M.ratio.crbe); crbe=Math.min(crbe,besw-A*MIN_W);   // Low keeps at least 3% width
+  let hiov=settle(ext(Hw,(a,b)=>a>b),ext(Ow,(a,b)=>a<b),A*M.ratio.hiov); hiov=Math.max(hiov,swhi+A*MIN_W);   // High keeps at least 3% width
+  return {anchor:A, railed, ratio:{crbe:crbe/A,besw:besw/A,swhi:swhi/A,hiov:hiov/A}, w:s.share, mids:{low:lowMid/A,high:highMid/A},
+    inWin:{sweet:S.length,low:Lw.length,high:Hw.length,crashed:Cw.length,over:Ow.length}}; }
+function engine(logs){
+  const timed=logs.filter(r=>!r.timeDefault);   // anastrozole learns only from logs with real times: a guessed time can be hours off
+  const N=timed.length, wD=Math.min(1,N/DRUG_FULL), best=fitDrug(timed), tRef=ms(M.refDate);   // each log counts once here; super sure is about the state, not the timing
+  const Imax=wD*best.Imax+(1-wD)*M.Imax, L50=wD*best.L50+(1-wD)*M.L50;
+  const aiHL=Math.min(M.aiHLmax,Math.max(M.aiHLmin,wD*best.aiHL+(1-wD)*M.aiHL));
+  const Lr=aiLoad(tRef,aiHL), startE=prodE(Tat(tRef),tRef)*(1-Imax*Lr/(Lr+L50));
+  const sc=buildScale(logs,{Imax,L50,aiHL},startE);
+  return Object.assign(sc,{Imax,L50,aiHL,wD,N,n:logs.length,fit:best,startE}); }
+function findConflicts(logs,p){   // a Low log above a sweet spot log, or a High log below one: both cannot be true.
+  // The stronger log wins (confidence, then real time over guessed time); at a tie the sweet spot log wins.
+  // Strongest clashes are settled first, and a log already set aside cannot knock out another. Recomputed every time, so a set-aside log returns once it fits.
+  const sweets=logs.filter(r=>r.state==="sweet_spot").sort((x,y)=>ms(x.t)-ms(y.t)).slice(-WIN.sweet_spot);
+  const e=new Map(logs.map(r=>[r,eAt(r,p)])), aside=new Set(), pairs=[];
+  for(const g of logs.filter(r=>r.state==="high_end"||r.state==="below")) for(const sw of sweets){
+    const clash=g.state==="high_end" ? e.get(g)<e.get(sw)*(1-CONFLICT_MARGIN) : e.get(g)>e.get(sw)*(1+CONFLICT_MARGIN);
+    if(clash) pairs.push([g,sw]); }
+  pairs.sort((a,b)=>Math.max(confRank(b[0]),confRank(b[1]))-Math.max(confRank(a[0]),confRank(a[1])));
+  for(const [g,sw] of pairs){ if(aside.has(g)||aside.has(sw)) continue; aside.add(confRank(g)>confRank(sw)?sw:g); }
+  return [...aside]; }
+function screenScale(hp){   // one even stretch: sweet spot middle = 100; room past each outer line = twice the neighbouring state's width
+  const R=hp.ratio, floor=R.crbe-2*(R.besw-R.crbe), top=R.hiov+2*(R.hiov-R.swhi), f=1/(1-floor);
+  const at=x=>100+(x-1)*100*f, max=at(top);
+  return {f, floor, top, max, at, show:e=>Math.max(0,Math.min(max,at(e/hp.anchor)))}; }
+function validatedReports(){   // sure logs always count; unsure only while they sit where the sure logs put you
+  const def=DATA.reports.filter(r=>r.state && !r.cleared && !isStartDay(r));
+  const sure=def.filter(r=>r.sure!==false), unsure=def.filter(r=>r.sure===false);
+  const keptUnsure=[], droppedUnsure=[], pendingUnsure=[];
+  if(unsure.length){
+    if(sure.length<2) pendingUnsure.push(...unsure);
+    else { const base=engine(sure);
+      for(const r of unsure){ const x=eAt(r,base)/base.anchor, b=ratioMap(base.ratio)[r.state];
+        if(x>=b[0]*(1-UNSURE_TOL) && x<=b[1]*(1+UNSURE_TOL)) keptUnsure.push(r); else droppedUnsure.push(r); } } }
+  return {sure, unsure, keptUnsure, droppedUnsure, pendingUnsure, used:sure.concat(keptUnsure)};
+}
+let REV=0; function bumpRev(){ REV++; }
+let _hpKey=null, _hpVal=null;
+function hisParams(){            // cached until any data or correction changes
+  const key=[REV, DATA.inj.length, DATA.ai.length, DATA.reports.length, DATA.blood.length, (DATA.factors||[]).length, CORR&&CORR.S].join("|");
+  if(key===_hpKey) return _hpVal;
+  _hpVal=hisParamsRaw(); _hpKey=key; return _hpVal; }
+function hisParamsRaw(){ const vr=validatedReports(); let used=vr.used, res=engine(used);
+  const aside=findConflicts(used,res); vr.setAside=aside;
+  if(aside.length){ used=used.filter(r=>!aside.includes(r)); res=engine(used); }
+  vr.used=used; return Object.assign(res,{vr}); }
+function tracks(t){
+  const amod=anchorModel(), cutM=cutoffs(amod);
+  const em=E2at(t), sm=stateOf(em,cutM);
+  const hp=hisParams(), cutH=cutoffs(hp.anchor,hp.ratio);
+  const eh=E2at(t,{Imax:hp.Imax,L50:hp.L50,aiHL:hp.aiHL}), sh=stateOf(eh,cutH), band=bandOf(sh,cutH);
+  // slope over 12h for direction
+  const eh2=E2at(t+12*3600000,{Imax:hp.Imax,L50:hp.L50,aiHL:hp.aiHL});
+  const dir=eh2>eh+1?"rising":eh2<eh-1?"falling":"steady";
+  return {model:{e:em,state:sm,cut:cutM,anchor:amod}, his:{e:eh,state:sh,band,cut:cutH,dir,params:hp}};
+}
+
+/* ----- alert engine: one at a time ----- */
+function sched(from,stepDays,mg,n){ const out=[]; for(let k=0;k<n;k++)
+  out.push({t:new Date(from+k*stepDays*86400000).toISOString().slice(0,16),mg}); return out; }
+function e2ai(w,hl){ // E2 with a custom anastrozole elimination half-life (for the alert/trend band)
+  const L=aiLoad(w,hl); const T=Tat(w); return prodE(T,w)*(1-M.Imax*L/(L+M.L50)); }
+function e2t(w,hl){ // E2 with a custom testosterone-release band (for falling)
+  const T=Tat(w,hl), L=Lat(w); return prodE(T,w)*(1-M.Imax*L/(L+M.L50)); }
+function alertNow(t){
+  const cut=cutoffs(anchorModel());
+  const crossUp=(fn)=>{ for(let h=0;h<=14*24;h+=1){ const w=t+h*3600000; if(fn(w)>cut.hiov) return h/24; } return null; };
+  const crossDn=(fn)=>{ for(let h=0;h<=14*24;h+=1){ const w=t+h*3600000; if(fn(w)<cut.crbe) return h/24; } return null; };
+  const upMid=crossUp(w=>e2ai(w,M.aiHL));
+  const dnMid=crossDn(w=>e2t(w,null));
+  if(upMid!=null && (dnMid==null || upMid<=dnMid)){
+    const lo=crossUp(w=>e2ai(w,M.aiHL*0.9)), hi=crossUp(w=>e2ai(w,M.aiHL*1.1)); // fast clearance earliest, slow latest
+    const ladder=[[3,0.12],[2,0.12],[3,0.16],[2,0.16],[3,0.25],[2,0.25]];
+    let prevent=null;
+    for(const [st,mg] of ladder){
+      const ex=sched(t,st,mg,8); let pk=0;
+      for(let h=0;h<=10*24;h+=3) pk=Math.max(pk,E2at(t+h*3600000,{extra:ex}));
+      if(pk<=cut.hiov){ prevent={st,mg,pk}; break; }
+    }
+    return {dir:"RISING", target:"over", when:t+upMid*86400000,
+            loDays:Math.max(1,Math.floor((lo!=null?lo:upMid))), hiDays:Math.max(2,Math.ceil((hi!=null?hi:upMid))),
+            prevent, kind:"rising"};
+  }
+  if(dnMid!=null){
+    const lo=crossDn(w=>e2t(w,{TE:3.4,TU:29,TP:19/24})), hi=crossDn(w=>e2t(w,{TE:4.2,TU:34,TP:25/24}));
+    return {dir:"FALLING", target:"crashed", when:t+dnMid*86400000,
+            loDays:Math.max(1,Math.floor((lo!=null?lo:dnMid))), hiDays:Math.max(2,Math.ceil((hi!=null?hi:dnMid))),
+            prevent:null, kind:"falling"};
+  }
+  return null;
+}
+
+/* ----- blood-draw planner ----- */
+function crossDate(thr,hl){
+  const t0=Date.now();
+  for(let h=0;h<=80*24;h+=6){ const w=t0+h*3600000; if(Tat(w,hl)<thr) return w; }
+  return null;
+}
+function bloodPlan(thr){
+  const central=crossDate(thr,null);
+  const early=crossDate(thr,{TE:3.4,TU:29,TP:19/24});   // fast release -> earliest
+  const late =crossDate(thr,{TE:4.2,TU:34,TP:25/24});   // slow release -> latest (conservative)
+  let share=null;
+  if(late){ const c=Tcomp(late,{TE:4.2,TU:34,TP:25/24}); share=Math.round(100*c.TU/c.total); }
+  return {central,early,late,share};
+}
+
+/* ===================== BLOOD CORRECTION (AUC-conserving local sensitivity) ===================== */
+const HLVAL={TE:4.0,TU:31,TP:25/24}, HLLO={TE:3.4,TU:29,TP:19/24}, HLHI={TE:4.2,TU:34,TP:25/24};
+const SIGMA0={TE:0.4/3.8, TU:2.5/31.5, TP:3/22};   // prior half-width / centre
+let CORR=loadCorr();
+function loadCorr(){ try{const j=localStorage.getItem("e2corr"); if(j)return JSON.parse(j);}catch(e){}
+  return {dTE:0,dTU:0,dTP:0,S:1,provisional:false,nDraws:0,informs:{TE:0,TU:0,TP:0}}; }
+function saveCorr(){ try{localStorage.setItem("e2corr",JSON.stringify(CORR));}catch(e){} }
+function effHalf(){ return {TE:HLVAL.TE*(1+CORR.dTE), TU:HLVAL.TU*(1+CORR.dTU), TP:HLVAL.TP*(1+CORR.dTP)}; }
+function effScale(){ return M.SCALE*CORR.S; }
+function sigmaNow(es){ return SIGMA0[es]/Math.pow(2, (CORR.informs[es]||0)/2); } // shrink /sqrt2 per informing draw
+
+function contribEster(date,es,halflife){ const e=M.ester[es], ke=e.ke, kr=LN2/halflife; let c=0;
+  for(const x of DATA.inj){ if(x.ester!==es)continue; const d=days(ms(date),ms(x.t)); if(d<=0)continue;
+    c+=e.tfrac*x.mg*(kr*ke/(ke-kr))*(Math.exp(-kr*d)-Math.exp(-ke*d)); }
+  return effScale()*c; }
+
+function attribute(draw){ // single-draw attribution for display and provisional apply
+  const date=draw.t, pred=Tat(ms(date)), meas=draw.tt, gap=pred>0?(meas-pred)/pred:0, dir=Math.sign(gap)||1;
+  const H=effHalf(), plasma={}, cap={}, w={}; let wsum=0;
+  for(const es of ["TE","TU","TP"]){
+    const cval=contribEster(date,es,H[es]); plasma[es]=pred>0?cval/pred:0;
+    let cmin=cval,cmax=cval;                            // reachable contribution over the clamp
+    for(let f=0;f<=1.0001;f+=0.1){ const hl=HLLO[es]+(HLHI[es]-HLLO[es])*f; const c=contribEster(date,es,hl);
+      if(c<cmin)cmin=c; if(c>cmax)cmax=c; }
+    cap[es] = dir>0 ? (cmax-cval)/pred : (cmin-cval)/pred;   // max value-change toward the gap (0 near a crossover)
+    w[es]=plasma[es]*sigmaNow(es)**2; wsum+=w[es];
+  }
+  for(const es in w) w[es]= wsum>0? w[es]/wsum : 0;
+  let alloc={TE:0,TU:0,TP:0}, remaining=gap, active=new Set(["TE","TU","TP"].filter(es=>Math.abs(cap[es])>1e-9&&w[es]>0));
+  for(let it=0; it<4 && active.size; it++){ let ws=0; active.forEach(es=>ws+=w[es]); if(ws<=0)break; let capped=false; const snap=remaining;
+    active.forEach(es=>{ const want=snap*w[es]/ws; if(Math.abs(want)>=Math.abs(cap[es])){ alloc[es]=cap[es]; remaining-=cap[es]; active.delete(es); capped=true; } });
+    if(!capped){ active.forEach(es=>{ alloc[es]=snap*w[es]/ws; }); remaining=0; active.clear(); } }
+  const esterTot=alloc.TE+alloc.TU+alloc.TP, scalePortion=gap-esterTot;
+  const dom=["TE","TU","TP"].sort((a,b)=>plasma[b]-plasma[a])[0];
+  return {date,pred,meas,gap,plasma,cap,alloc,scalePortion,dom,w};
+}
+
+function solveHalf(date,es,targetContrib){ // bisect half-life in clamp to hit a target contribution; clamp if out of range
+  let lo=HLLO[es],hi=HLHI[es], clo=contribEster(date,es,lo), chi=contribEster(date,es,hi);
+  if((targetContrib-clo)*(targetContrib-chi)>0) return Math.abs(clo-targetContrib)<Math.abs(chi-targetContrib)?lo:hi;
+  for(let i=0;i<40;i++){ const mid=(lo+hi)/2, cm=contribEster(date,es,mid);
+    if((cm-targetContrib)*(clo-targetContrib)<=0){hi=mid;chi=cm;} else {lo=mid;clo=cm;} }
+  return (lo+hi)/2;
+}
+
+function recomputeCorrection(){ if(typeof bumpRev==="function") bumpRev(); // re-derive CORR from ALL logged draws (accumulate, never replace)
+  CORR={dTE:0,dTU:0,dTP:0,S:1,provisional:false,nDraws:0,informs:{TE:0,TU:0,TP:0}};
+  const draws=(DATA.blood||[]).filter(b=>b.tt>0).sort((a,b)=>ms(a.t)-ms(b.t));
+  CORR.nDraws=draws.length;
+  if(draws.length===0){ saveCorr(); return; }
+  if(draws.length===1){                               // provisional: share by local sensitivity, scale takes overflow, closes exactly
+    const a=attribute(draws[0]), date=draws[0].t, pred0=Tat(ms(date));
+    for(const es of ["TE","TU","TP"]){ if(Math.abs(a.alloc[es])>0.002 && Math.abs(a.cap[es])>0.002 && a.plasma[es]>0.01){
+      const target=(a.plasma[es]+a.alloc[es])*pred0, hl=solveHalf(date,es,target);
+      CORR["d"+es]=hl/HLVAL[es]-1; CORR.informs[es]=1; } }
+    const predNow=Tat(ms(date)); CORR.S *= draws[0].tt/predNow;    // scale closes the remainder exactly
+    CORR.provisional=true; saveCorr(); return;
+  }
+  // >= 2 draws: joint bounded fit. Ratios pin half-lives, level pins scale (scale cancels in a ratio).
+  const clampD=es=>[HLLO[es]/HLVAL[es]-1, HLHI[es]/HLVAL[es]-1];
+  const cost=()=>{ let j=0; for(const b of draws){ const p=Tat(ms(b.t)); j+=Math.pow((p-b.tt)/(b.tt*0.07),2); } // 0.07 = assay error
+    j+=Math.pow(CORR.dTE/SIGMA0.TE,2)+Math.pow(CORR.dTU/SIGMA0.TU,2)+Math.pow(CORR.dTP/SIGMA0.TP,2); return j; };
+  const golden=(set,lo,hi)=>{ const gr=0.618; let a=lo,b=hi; for(let i=0;i<28;i++){ const c=b-gr*(b-a),d=a+gr*(b-a);
+      set(c); const fc=cost(); set(d); const fd=cost(); if(fc<fd)b=d; else a=c; } set((a+b)/2); };
+  for(let sweep=0; sweep<24; sweep++){
+    for(const es of ["TE","TU","TP"]){ const [cl,ch]=clampD(es); golden(v=>{CORR["d"+es]=v;}, cl, ch); }
+    golden(v=>{CORR.S=v;}, 0.3, 3.0);
+  }
+  for(const es of ["TE","TU","TP"]) CORR.informs[es]=draws.length-1;  // ratios across N draws inform half-lives
+  CORR.provisional=false; saveCorr();
+}
+function drawReview(draw){ const a=attribute(draw); const g=Math.abs(a.gap);
+  if(g<0.30) return null;
+  return {gap:a.gap, dom:a.dom, domShare:Math.round(a.plasma[a.dom]*100), mixed:a.plasma[a.dom]<0.5, scale:a.scalePortion}; }
+
+/* ----- build-time assertions (Section 12 checks + Section 8 free-T guard) ----- */
+// Di Luigi free fractions. Gate on the calculated column (direct RIA; measured is a different assay, reported as context).
+// Day 49 is not a gate: its calculated 2.33 equals baseline's at higher SHBG, impossible for Vermeulen, so it is reported only.
+const DILUIGI_PAIRS=[
+  {lab:"baseline",TT:3.12, S:20.0, calc:2.33, meas:2.32, gate:true},
+  {lab:"day 7",   TT:35.71,S:16.2, calc:3.13, meas:3.26, gate:true},
+  {lab:"day 14",  TT:13.52,S:16.8, calc:2.74, meas:2.92, gate:true},
+  {lab:"day 21",  TT:7.63, S:18.6, calc:2.51, meas:2.72, gate:true},
+  {lab:"day 49",  TT:3.12, S:21.2, calc:2.33, meas:2.79, gate:false}
+];
+function runChecks(){
+  const out=[], push=(name,pass,detail)=>out.push({name,pass,detail});
+  const inj0=Math.min(...DATA.inj.map(x=>ms(x.t))), ai0=Math.min(...DATA.ai.map(x=>ms(x.t)));
+  push("No testosterone counted before its timestamp", Tat(inj0-3600000)===0, "T 1 h before first injection = "+Tat(inj0-3600000).toFixed(2));
+  push("No anastrozole counted before its timestamp", Lat(ai0-3600000)===0, "load 1 h before first dose = "+Lat(ai0-3600000).toFixed(4));
+  const totalAI=DATA.ai.reduce((a,x)=>a+x.mg,0); let maxL=0;
+  for(let h=0;h<=220*24;h+=6) maxL=Math.max(maxL,Lat(inj0+h*3600000));
+  push("Anastrozole load never exceeds total administered", maxL<=totalAI+1e-9, "max "+maxL.toFixed(3)+" of "+totalAI.toFixed(2)+" mg");
+  let bounded=true, bad="";
+  for(let h=0;h<=220*24;h+=6){ const w=inj0+h*3600000, T=Tat(w), e=E2at(w);
+    if(!(T>=0&&T<2000&&e>=0&&e<800)){ bounded=false; bad="T="+T.toFixed(0)+" E2="+e.toFixed(0); break; } }
+  push("Outputs within physiological bounds", bounded, bounded?"T<2000 nmol/L, 0<E2<800 pmol/L across 220 d":bad);
+  const r20=freeT(20,9)/freeT(20,20), r150=freeT(150,9)/freeT(150,20);
+  push("Free-T: +26% at T 20 (SHBG 9 vs 20)", Math.abs(r20-1.26)<0.03, "ratio "+r20.toFixed(3));
+  push("Free-T: +7% at T 150 (SHBG 9 vs 20)", Math.abs(r150-1.07)<0.03, "ratio "+r150.toFixed(3));
+  push("Free-T physiological at T 90", freeT(90,9)>3&&freeT(90,9)<5, freeT(90,9).toFixed(2)+"%");
+  let dlOk=true, worst=0, wl="";
+  for(const p of DILUIGI_PAIRS.filter(p=>p.gate)){ const d=Math.abs(freeT(p.TT,p.S)-p.calc); if(d>worst){worst=d;wl=p.lab;} if(d>0.05)dlOk=false; }
+  push("Di Luigi free fractions, calculated column", dlOk, `worst gate point ${wl} ${worst.toFixed(3)} pp (tol 0.05); day 49 excluded, its 2.33 cannot come from SHBG 21.2`);
+  const hp=hisParams();
+  push("16.10 counts once, as the start", !hp.vr.used.some(isStartDay), "start day excluded from the logs");
+  push("Ranges ordered, sweet range contains 100%", hp.ratio.crbe<hp.ratio.besw&&hp.ratio.besw<1&&1<hp.ratio.swhi&&hp.ratio.swhi<hp.ratio.hiov, [hp.ratio.crbe,hp.ratio.besw,hp.ratio.swhi,hp.ratio.hiov].map(x=>x.toFixed(3)).join(" / "));
+  push("Clearance within 30 to 48 h", hp.aiHL>=M.aiHLmin-1e-9&&hp.aiHL<=M.aiHLmax+1e-9, hp.aiHL.toFixed(1)+" h");
+  push("Conversion curve on free testosterone", Math.abs(prodE(30,null)/fatFactor(null)-112)<1.5 && prodE(60,null)/prodE(30,null)>1.35 && prodE(60,null)/prodE(30,null)<1.5, `112 pmol/L at total 30; doubling to 60 gives +${r0((prodE(60,null)/prodE(30,null)-1)*100)}%`);
+  return out;
+}
+
+/* ============================ DATA ============================ */
+const SEED={
+  inj:[
+    {t:"2026-07-22T16:00",ester:"TU",mg:750},{t:"2026-07-22T16:00",ester:"TE",mg:300},
+    {t:"2026-07-23T16:00",ester:"TU",mg:1000},
+    {t:"2026-07-29T16:00",ester:"TE",mg:300},{t:"2026-08-06T16:00",ester:"TE",mg:300},
+    {t:"2026-08-13T16:00",ester:"TE",mg:300},{t:"2026-08-13T16:00",ester:"TU",mg:1000},
+    {t:"2026-08-20T16:00",ester:"TE",mg:300},{t:"2026-08-27T16:00",ester:"TE",mg:300},
+    {t:"2026-09-03T16:00",ester:"TE",mg:300},{t:"2026-09-10T16:00",ester:"TE",mg:300},
+    {t:"2026-09-17T16:00",ester:"TE",mg:300},{t:"2026-09-24T16:00",ester:"TE",mg:300},
+    {t:"2026-10-04T16:00",ester:"TE",mg:300},{t:"2026-10-06T16:00",ester:"TU",mg:1000},
+    {t:"2026-10-12T16:00",ester:"TE",mg:300},
+    {t:"2026-10-14T16:00",ester:"TE",mg:300},{t:"2026-10-14T16:00",ester:"TP",mg:50},
+    {t:"2026-10-15T12:15",ester:"TP",mg:100}
+  ],
+  ai:[
+    {t:"2026-10-12T16:00",mg:0.25},{t:"2026-10-13T16:00",mg:0.25},{t:"2026-10-14T23:00",mg:0.5},
+    {t:"2026-10-17T19:00",mg:0.12},{t:"2026-10-19T16:00",mg:0.12},{t:"2026-10-21T16:00",mg:0.16}
+  ],
+  // seed report times are assigned by rule, not reported: dose-1h before AI, dose+6h after AI, else 16:00 default
+  reports:[
+    {t:"2026-10-12T15:00",state:"over",      note:"confused, agitated, dreamy, above threshold",seeded:true,timeDefault:true},
+    {t:"2026-10-12T22:00",state:"sweet_spot",note:"presence, good energy and mood",seeded:true,timeDefault:true},
+    {t:"2026-10-13T16:00",state:"over",      note:"off, dreamy, confused",seeded:true,timeDefault:true,conflict:true},
+    {t:"2026-10-15T16:00",state:"below",     note:"below sweet spot in the morning, rising",seeded:true,timeDefault:true},
+    {t:"2026-10-16T16:00",state:"sweet_spot",note:"sweet spot all day",seeded:true,timeDefault:true},
+    {t:"2026-10-17T16:00",state:"high_end",  note:"high end, emotional, crying easily",seeded:true,timeDefault:true,conflict:true},
+    {t:"2026-10-19T16:00",state:"high_end",  note:"a bit above sweet spot midday",seeded:true,timeDefault:true},
+    {t:"2026-10-20T16:00",state:"high_end",  note:"cried at a movie",seeded:true,timeDefault:true},
+    {t:"2026-10-21T16:00",state:null,        note:"disconnected, tired but wired",seeded:true,timeDefault:true,ambiguous:true}
+  ],
+  blood:[],  // {t, tt (nmol/L), ft (free T), shbg}
+  factors:[],    // {t, weight (kg), bodyfat (%), shbg (nmol/L)} — each optional. SHBG feeds free-T live; body fat shifts estrogen by a fixed study number; weight recorded only
+  anchorLog:[]   // {n, a} anchor snapshots every 10 reports
+};
+/* ----- durable storage: localStorage for speed + IndexedDB mirror for durability ----- */
+let loadedFromStore=false, _idc=0, idb=null;
+function idbOpen(){ return new Promise(res=>{ try{ const r=indexedDB.open("e2app",1);
+  r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>res(null);
+  }catch(e){ res(null); } }); }
+function idbSet(v){ try{ if(!idb)return; const tx=idb.transaction("kv","readwrite"); tx.objectStore("kv").put(JSON.parse(JSON.stringify(v)),"data"); }catch(e){} }
+function idbGet(){ return new Promise(res=>{ if(!idb)return res(null); try{ const rq=idb.transaction("kv","readonly").objectStore("kv").get("data"); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>res(null); }catch(e){ res(null); } }); }
+function ensureIds(){ ["inj","ai","reports","blood","factors"].forEach(k=>(DATA[k]||[]).forEach(x=>{ if(!x.id) x.id="e"+Date.now().toString(36)+(_idc++); })); }
+function setShbgFromBlood(){ }   // SHBG is time-stamped only (shbgAt); the default 9 is never overwritten, so a new value cannot leak backward
+function shbgAt(t){ // most recent measured SHBG at or before t, from factors or blood; default M.shbg (9)
+  const src=[].concat(DATA.factors||[], DATA.blood||[]).filter(x=>x.shbg!=null).sort((a,b)=>ms(a.t)-ms(b.t));
+  let v=M.shbg; for(const x of src){ if(ms(x.t)<=t) v=x.shbg; else break; } return v; }
+function latestFactor(key,t){ const now=t==null?Date.now():t;
+  const src=(DATA.factors||[]).filter(x=>x[key]!=null&&ms(x.t)<=now).sort((a,b)=>ms(b.t)-ms(a.t)); return src.length?src[0][key]:null; }
+function bodyfatAt(t){ const now=t==null?Date.now():t;   // straight line between your body fat logs; before the first and after the last it holds that value; none logged = null
+  const src=(DATA.factors||[]).filter(x=>x.bodyfat!=null).sort((a,b)=>ms(a.t)-ms(b.t)); if(!src.length) return null;
+  if(now<=ms(src[0].t)) return src[0].bodyfat; const last=src[src.length-1]; if(now>=ms(last.t)) return last.bodyfat;
+  for(let i=0;i<src.length-1;i++){ const a=src[i], b=src[i+1], ta=ms(a.t), tb=ms(b.t);
+    if(now>=ta&&now<=tb) return tb>ta ? a.bodyfat+(b.bodyfat-a.bodyfat)*(now-ta)/(tb-ta) : b.bodyfat; }
+  return last.bodyfat; }
+function normalize(d){ ["inj","ai","reports","blood","factors","anchorLog"].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
+  d.reports=d.reports.filter(r=>!(r.seeded && r.t==="2026-10-14T16:00" && r.state==="crashed"));   // removed at your request: 14.10 crash, time unknown, may not have been a crash
+  d.migrations=Array.isArray(d.migrations)?d.migrations:[];
+  if(!d.migrations.includes("log-check-24oct")){   // your corrected log of 24.10, applied once
+    const a=d.ai.find(x=>x.t==="2026-10-21T16:00" && x.mg===0.16); if(a) a.t="2026-10-22T16:00";
+    const h17=d.reports.find(r=>r.t==="2026-10-17T16:00" && r.state==="high_end" && r.seeded); if(h17){ h17.state="sweet_spot"; h17.note="sweet spot (corrected 24.10)"; delete h17.conflict; }
+    d.reports=d.reports.filter(r=>!(r.seeded && r.t==="2026-10-20T16:00" && r.state==="high_end"));
+    const add=(t,state,extra)=>{ if(!d.reports.some(r=>r.t===t && r.state===state)) d.reports.push(Object.assign({t,state,note:"",seeded:false,sure:true},extra||{})); };
+    add("2026-10-23T03:49","sweet_spot",{superSure:true,note:"03:00 to 04:38, very sure"});
+    add("2026-10-24T16:00","high_end",{superSure:true,note:"very sure"});
+    d.migrations.push("log-check-24oct"); }
+  if(!d.migrations.includes("log-24oct-0326")){   // 24.10 03:26: still High, not above ceiling
+    if(!d.reports.some(r=>r.t==="2026-10-24T03:26")) d.reports.push({t:"2026-10-24T03:26",state:"high_end",note:"still high, not above ceiling",seeded:false,sure:true});
+    d.migrations.push("log-24oct-0326"); }
+  if(!d.migrations.includes("log-fix-24oct-b")){   // 15.10 Low deleted at your request; 19.10 High was at 12:00 (you took anastrozole because of it)
+    d.reports=d.reports.filter(r=>!(r.seeded && r.t==="2026-10-15T16:00" && r.state==="below"));
+    const h19=d.reports.find(r=>r.seeded && r.t==="2026-10-19T16:00" && r.state==="high_end"); if(h19){ h19.t="2026-10-19T12:00"; delete h19.timeDefault; }
+    d.migrations.push("log-fix-24oct-b"); }
+  if(!d.migrations.includes("log-setaside-24oct-c")){   // set aside for now at your request (guessed times, probably lower High that felt like sweet spot); kept, not deleted
+    d.reports.forEach(r=>{ if(r.seeded && r.state==="sweet_spot" && (r.t==="2026-10-12T22:00"||r.t==="2026-10-17T16:00")) r.cleared=true; });
+    d.migrations.push("log-setaside-24oct-c"); }
+  if(!d.migrations.includes("log-ceiling-24oct-d")){   // 24.10 16:00: you paid attention and felt Above ceiling just starting; marks where your ceiling begins
+    const c=d.reports.find(r=>r.t==="2026-10-24T16:00" && r.state==="high_end"); if(c){ c.state="over"; c.note="Above ceiling just starting (paid attention)"; }
+    d.migrations.push("log-ceiling-24oct-d"); }
+  if(!d.migrations.includes("log-24oct-e")){   // 24.10: ceiling log counts once (sure, not super sure); 0.12 mg anastrozole at 21:40 on 24.10
+    const c=d.reports.find(r=>r.t==="2026-10-24T16:00" && r.state==="over"); if(c){ delete c.superSure; c.sure=true; c.note="Above ceiling, definitely where it starts"; }
+    if(!d.ai.some(a=>a.t==="2026-10-24T21:40")) d.ai.push({t:"2026-10-24T21:40",mg:0.12});
+    d.ai.sort((a,b)=>ms(a.t)-ms(b.t));
+    d.migrations.push("log-24oct-e"); }
+  if(!d.migrations.includes("log-24oct-g")){   // 24.10 16:00 was almost at the ceiling, not really above: High. 19.10 High stays counted. Your ceiling lands just above it, about 127 pmol/L objective
+    const c=d.reports.find(r=>r.t==="2026-10-24T16:00" && r.state==="over"); if(c){ c.state="high_end"; c.note="almost at the ceiling, not really above (paid attention)"; }
+    const h19=d.reports.find(r=>r.state==="high_end" && r.t==="2026-10-19T12:00"); if(h19) delete h19.cleared;
+    d.migrations.push("log-24oct-g"); }
+  return d; }  // any stored or restored data gets every list, so no save path can hit a missing one
+let DATA=load();
+function load(){
+  try{ const j=localStorage.getItem("e2model"); if(j){ const d=JSON.parse(j); normalize(d); loadedFromStore=true; return d; } }catch(e){}
+  return normalize(JSON.parse(JSON.stringify(SEED)));
+}
+let saveFailAt=0;   // a failed save must not be hidden by the success message that follows it
+function save(){ ensureIds(); bumpRev(); let ok=true;
+  try{ localStorage.setItem("e2model",JSON.stringify(DATA)); }catch(e){ ok=false; }
+  idbSet(DATA);
+  if(!ok){ saveFailAt=Date.now(); toast("Save blocked, export a backup"); }
+  return ok; }
+
+/* ============================ RENDER ============================ */
+const $=s=>document.querySelector(s);
+function num(sel){ const v=String(($(sel)||{}).value||"").trim().replace(/\s/g,"").replace(",","."); const x=parseFloat(v); return isFinite(x)?x:NaN; }  // accepts 17,5 and 17.5
+const fmtDay=t=>new Date(t).toLocaleDateString("en-GB",{weekday:"short",day:"2-digit",month:"short"});
+const fmtDT=t=>new Date(t).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+const r0=x=>Math.round(x), r1=x=>Math.round(x*10)/10;
+
+let INFO={};
+function iBtn(id){ return `<button class="i" onclick="openInfo('${id}')">i</button>`; }
+function openInfo(id){ const d=INFO[id]; if(!d)return;
+  $("#sheet").innerHTML=`<h4>${d.t}</h4>${d.body}`; $("#sheetbg").classList.add("on"); }
+$("#sheetbg").addEventListener("click",e=>{ if(e.target.id==="sheetbg") $("#sheetbg").classList.remove("on"); });
+
+const ESTCOL={TE:"#4DB8D9", TU:"#2A8A8F", TP:"#5B4FA8"};
+function stackedChart(nowT, back, fwd, yMax){ // per-ester contribution to total T
+  const W=680,H=180,padL=42,padR=8,padT=14,padB=30, short=back<=12;
+  const tMin=nowT-back*3600000, tMax=nowT+fwd*3600000, N=90;
+  const X=t=>padL+(t-tMin)/(tMax-tMin)*(W-padL-padR), Y=v=>padT+(1-v/yMax)*(H-padT-padB);
+  const pts=[]; for(let i=0;i<=N;i++){ const t=tMin+(tMax-tMin)*i/N; pts.push({t,c:Tcomp(t)}); }
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="display:block">`;
+  s+=`<rect x="${X(nowT).toFixed(1)}" y="${padT}" width="${(W-padR-X(nowT)).toFixed(1)}" height="${H-padT-padB}" fill="rgba(95,122,134,0.08)"/>`;
+  let base=pts.map(()=>0);
+  for(const es of ["TU","TE","TP"]){                       // stack: undecanoate base, enanthate, propionate on top
+    const top=pts.map((p,i)=>base[i]+p.c[es]); let d="";
+    pts.forEach((p,i)=>{ d+=(i?"L":"M")+X(p.t).toFixed(1)+" "+Y(top[i]).toFixed(1)+" "; });
+    for(let i=pts.length-1;i>=0;i--) d+="L"+X(pts[i].t).toFixed(1)+" "+Y(base[i]).toFixed(1)+" ";
+    s+=`<path d="${d}Z" fill="${ESTCOL[es]}" opacity="0.72"/>`; base=top;
+  }
+  let tl=""; pts.forEach((p,i)=>{ tl+=(i?"L":"M")+X(p.t).toFixed(1)+" "+Y(p.c.total).toFixed(1)+" "; });
+  s+=`<path d="${tl}" fill="none" stroke="#EAF4F8" stroke-width="1" opacity="0.55"/>`;
+  const nx=X(nowT).toFixed(1);
+  s+=`<line x1="${nx}" y1="${padT}" x2="${nx}" y2="${H-padB}" stroke="#4DB8D9" opacity="0.85"/><text x="${nx}" y="${padT+9}" fill="#4DB8D9" font-family="${MONO}" font-size="9" text-anchor="middle">now</text>`;
+  for(const v of [0,yMax/2,yMax]){ const y=Y(v).toFixed(1); s+=`<text x="${padL-4}" y="${(+y+3).toFixed(1)}" fill="#5F7A86" font-family="${MONO}" font-size="9" text-anchor="end">${Math.round(v)}</text>`; }
+  const tk=short?4:5;
+  for(let i=0;i<=tk;i++){ const t=tMin+(tMax-tMin)*i/tk, x=X(t).toFixed(1); const lab=short?new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):new Date(t).toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit"}); s+=`<text x="${x}" y="${H-padB+13}" fill="#5F7A86" font-family="${MONO}" font-size="8.5" text-anchor="middle">${lab}</text>`; }
+  s+=`<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="rgba(77,184,217,0.16)"/></svg>`;
+  return s;
+}
+function pieChart(t){ // current share of each ester in the total
+  const c=Tcomp(t), total=c.total||1;
+  const parts=[["TU",c.TU],["TE",c.TE],["TP",c.TP]].filter(p=>p[1]/total>0.001);
+  const W=300,H=200,cx=150,cy=100,r=84;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-width:300px;margin:0 auto">`, a0=-Math.PI/2;
+  for(const [es,val] of parts){ const frac=val/total, a1=a0+frac*2*Math.PI;
+    const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0), x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1), large=frac>0.5?1:0;
+    s+=`<path d="M${cx} ${cy} L${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z" fill="${ESTCOL[es]}" opacity="0.88" stroke="#06181F" stroke-width="2"/>`;
+    const am=(a0+a1)/2, lr=r*0.6, pct=Math.round(frac*100);
+    if(pct>=6) s+=`<text x="${(cx+lr*Math.cos(am)).toFixed(1)}" y="${(cy+lr*Math.sin(am)).toFixed(1)}" fill="#EAF4F8" font-family="${MONO}" font-size="14" font-weight="700" text-anchor="middle" dominant-baseline="central">${pct}%</text>`;
+    a0=a1; }
+  s+=`</svg>`; return s;
+}
+function trendNow(t){ // momentum (bands/day) + time to next boundary, on current dosing, no new testosterone
+  const cut=cutoffs(anchorModel()), e0=E2at(t), slope=E2at(t+24*3600000)-e0;
+  const band=cut.swhi-cut.besw;                 // one state width, about 0.1 x anchor
+  const bpd=Math.abs(slope)/band;               // bands per day
+  if(bpd<0.15) return {dir:"steady"};
+  const dir=slope>0?"rising":"falling";
+  const rate = bpd<0.33?"slow": bpd<=1.33?"moderate":"fast";   // under 1/3 band, 1/3 to 1 1/3, over
+  const bs=[cut.crbe,cut.besw,cut.swhi,cut.hiov];
+  const target = dir==="rising" ? bs.filter(b=>b>e0+0.5).sort((a,b)=>a-b)[0] : bs.filter(b=>b<e0-0.5).sort((a,b)=>b-a)[0];
+  let nextState=null,lo=null,hi=null;
+  if(target!=null){
+    const cross=hl=>{ for(let h=0;h<=14*24;h+=1){ const e=e2ai(t+h*3600000,hl); if(dir==="rising"?e>=target:e<=target) return h/24; } return null; };
+    const a=cross(M.aiHL*0.9), b=cross(M.aiHL*1.1);
+    lo=(a!=null&&b!=null)?Math.max(1,Math.floor(Math.min(a,b))):null; hi=(a!=null&&b!=null)?Math.max(1,Math.ceil(Math.max(a,b))):null;
+    nextState=SNAME(dir==="rising"?stateOf(target+0.1,cut):stateOf(target-0.1,cut));
+  }
+  return {dir, rate, slope, nextState, lo, hi};
+}
+function pill(on,label,onclick){ return `<div onclick="${onclick}" style="flex:0 0 auto;padding:4px 11px;border:1px solid ${on?'var(--accent)':'var(--border)'};border-radius:999px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${on?'var(--accent)':'var(--muted)'};${on?'background:var(--tint);':''}cursor:pointer">${label}</div>`; }
+function viewToggle(fn){ return `<div style="display:flex;gap:6px;margin:8px 0 2px;flex-wrap:wrap">`+
+  Object.keys(VIEWS).map(k=>pill(k===trendsView,VIEWS[k].label,`trendsView='${k}';${fn}()`)).join("")+`</div>`; }
+let e2mode="yours", previewDose=0, chartShow="e2";
+function chartShowToggle(){ return `<div style="display:flex;gap:6px;margin:10px 0 2px;flex-wrap:wrap">`+
+  [["e2","Estradiol"],["t","Testosterone"],["et","Estradiol + testosterone"]].map(([k,l])=>pill(k===chartShow,l,`chartShow='${k}';renderEstrogen()`)).join("")+`</div>`; }
+function stateCrossings(fn,lines,NAMES,t0,t1){   // every moment the line crosses one of the drawn lines, refined to the minute
+  const lvl=v=>lines.filter(x=>v>=x).length;
+  const out=[];
+  if(!(t1>t0)) return out;
+  const n=Math.max(200,Math.ceil((t1-t0)/(20*60000)));   // at most 20 minutes between samples
+  let pt=t0, pv=lvl(fn(t0));
+  for(let i=1;i<=n;i++){ const tt=t0+(t1-t0)*i/n; let a0=pt;
+    while(lvl(fn(tt))!==pv){ let a=a0,b=tt; while(b-a>60000){ const m=(a+b)/2; if(lvl(fn(m))===pv) a=m; else b=m; }
+      const nl=lvl(fn(b)); out.push({t:b,to:NAMES[nl],up:nl>pv}); pv=nl; a0=b; if(out.length>200) return out; }
+    pt=tt; }
+  return out; }
+function e2ModeToggle(){ return `<div style="display:flex;gap:6px;margin:10px 0 2px;flex-wrap:wrap">`+
+  [["yours","Your estimate"],["objective","Objective"],["both","Both"]].map(([k,l])=>pill(k===e2mode,l,`e2mode='${k}';renderEstrogen()`)).join("")+`</div>`; }
+let lineMode="yours";   // which boundary lines the chart draws: your learned states, or the population normal range
+function lineToggle(){ return `<div style="display:flex;gap:6px;margin:10px 0 2px;flex-wrap:wrap;align-items:center">`+
+  `<span class="lab" style="margin-right:2px">Lines</span>`+
+  [["yours","Your estimate"],["objective","Objective"]].map(([k,l])=>pill(k===lineMode,l,`lineMode='${k}';renderEstrogen()`)).join("")+`</div>`; }
+
+function renderEstrogen(){
+  const t=Date.now(), tr=tracks(t), tn=trendNow(t), hp=tr.his.params, w=hp.w, v=VIEWS[trendsView];
+  const anchor=hp.anchor, cut=cutoffs(anchor,hp.ratio);
+  const anchorDep=`<p class="k">Sweet spot, Low and High each have a middle: the average of your last ${WIN.sweet_spot} sweet spot logs and last ${WIN.below} Low or High logs. Until a state has its logs, the empty places hold a starting middle (for the sweet spot, the model's value on 16.10.2026 16:00). The lines beside the sweet spot sit halfway between neighbouring middles. The outer lines start at 80% and 118% of the sweet spot and move only when a log lands on the wrong side. Now: ${r0(hp.ratio.crbe*100)} / ${r0(hp.ratio.besw*100)} / ${r0(hp.ratio.swhi*100)} / ${r0(hp.ratio.hiov*100)}% of the sweet spot.</p>`;
+  INFO.model={t:"Objective",body:`<p>What a blood test would read, from injections and anastrozole only. It does not know how you feel.</p>
+    <p class="k">Low, Normal or High is against other men, not against your own states: normal ${NORM.lo} to ${NORM.hi} pmol/L, measured by mass spectrometry. The top is solid, four studies land between 136 and 150. The bottom is not: the studies give 12, 37 and 50, so ${NORM.lo} is the middle of that spread and the chart draws ${NORM.bandLo} to ${NORM.bandHi} in grey to show it.</p>
+    <p class="k">E2 = 261 x conversion(free T at your SHBG) x body fat factor x (1 - Imax x L/(L+L50)). Conversion is half maximal at free T 1.4 nmol/L, gives about 40% more E2 per doubling of testosterone where the study measured, and levels off further above free T 5.3 nmol/L, beyond the study's range.</p>
+    <p class="k">Anchor = ${r0(tr.model.anchor)} pmol/L.</p>${anchorDep}
+    <p class="k">Conversion: Lakshman 2010 main finding (about 40% more E2 per doubling of testosterone), on free testosterone at your SHBG, levelling off above the study's range (fitted to your logs, not measured). Body fat: +2% per 10 points of body fat, same study, fixed. FITTED scale. Anastrozole strength and clearance from the literature (clearance ${M.aiHL} h).</p>`};
+  const scr=screenScale(hp);
+  INFO.his={t:"Your estimate",body:`<p>The model re-run with what your logs teach it: where your states sit, how hard anastrozole hits you, and how fast you clear it. 100 is always the middle of your sweet spot. The scale is your real estrogen stretched by one factor (x${scr.f.toFixed(2)} now), so every percent counts the same; past each outer line there is room twice the width of the neighbouring state, and anything beyond shows at the edge.</p>
+    <p class="k">Every state counts 1. Super sure counts ${SUPER_SURE}. Unsure counts only if it fits your sure logs. A Low or High log that contradicts a sweet spot log is set aside unless it is more confident; it returns once it fits.</p>
+    <p class="k">Learned now: sweet spot middle ${r0(hp.anchor)} pmol/L (model ${r0(tr.model.anchor)}${hp.railed?", held at the plausibility limit":""}); anastrozole strength Imax ${r1(hp.Imax)}, L50 ${r1(hp.L50)}; clearance ${r1(hp.aiHL)} h (kept ${M.aiHLmin} to ${M.aiHLmax} h). Strength and clearance are ${r0(hp.wD*100)}% from your logs: fully yours after ${DRUG_FULL} logs, then every log counts the same.</p>${anchorDep}`};
+  INFO.weight={t:"How much is yours",body:`<p>How much of your sweet spot middle comes from your own logs rather than the 16.10 start: ${r0(w*100)}% now. Each sweet spot log fills one of ${WIN.sweet_spot} places; after ${WIN.sweet_spot} it is fully yours, and each new log replaces the oldest. Model input weight, not your body weight.</p>`};
+  INFO.trydose={t:"Try a dose",body:`<p>Pick an anastrozole amount and the graph draws, dashed, where your estimate would go if you took it right now. It is a projection only, nothing is logged, and it does not decide for you.</p>
+    <p class="k">The readout names the low point it reaches and roughly when. You still dose when you feel it.</p>`};
+  INFO.trend={t:"Trend",body:`<p>Which way your estradiol is moving on your logged doses, and how fast, with no new testosterone.</p>
+    <p class="k">Rate is momentum: how much it moves per day, in state-widths (one width is about ${r0(cut.swhi-cut.besw)} pmol). Slow = under a third of a width a day, moderate = a third to one and a third, fast = over. ${tn.slope!=null?`Now about ${Math.abs(Math.round(tn.slope))} pmol a day.`:""}</p>
+    <p class="k">The line below is separate: how long until you cross into the next state. You can be moving slowly but sit right on a boundary.</p>`};
+  const snaps=anchorSeries(4);
+  const bLine=(name,ratio)=>`<p style="margin:8px 0"><span class="state" style="font-size:12px;color:var(--muted)">${name}</span><br><span class="mono" style="font-size:16px;color:var(--text)">${snaps.map(a=>Math.round(ratio*a)).join("  &rarr;  ")}</span></p>`;
+  INFO.e2chart={t:"Boundary trajectories",body:`<p class="k">Dotted vertical lines mark each moment the line crosses one of your state lines, labelled with the time and the state it enters (arrow up or down), so you can check whether what you feel matches. "Estradiol + testosterone" adds testosterone as a dotted line on its own scale; "Testosterone" shows testosterone alone in nmol/L.</p><p class="k">Each boundary in pmol/L, newest on the right. Earlier points are snapshots every 10 reports; the last is live.</p>
+    ${bLine("Above ceiling",hp.ratio.hiov)}${bLine("High",hp.ratio.swhi)}${bLine("Sweet spot",hp.ratio.besw)}${bLine("Crashed",hp.ratio.crbe)}`};
+  let trendCard;
+  if(tn.dir==="steady") trendCard=`<div class="card"><div class="row"><h2>Trend</h2>${iBtn('trend')}</div><div class="state">Steady</div><div class="sub" style="margin-top:6px">Holding in band on current dosing.</div></div>`;
+  else { const cap=tn.dir.charAt(0).toUpperCase()+tn.dir.slice(1);
+    const daysTxt = tn.lo==null?"":tn.lo===tn.hi?`about ${tn.lo} day${tn.lo>1?"s":""}`:`about ${tn.lo} to ${tn.hi} days`;
+    const line = tn.nextState ? `Into ${tn.nextState}${daysTxt?` in ${daysTxt}`:``}` : `At the edge of the range`;
+    trendCard=`<div class="card"><div class="row"><h2>Trend</h2>${iBtn('trend')}</div>
+      <div class="row" style="align-items:baseline"><div class="state">${cap} ${tn.rate}</div><div class="sub mono" style="font-size:12px">${line}</div></div></div>`; }
+  const pc=x=>r0(Math.max(0,Math.min(scr.max,scr.at(x/hp.anchor))));
+  const pctTxt = tr.his.state==="crashed" ? `Crashed is 0 to ${pc(tr.his.band[1])}` : tr.his.band[1]!=null ? `${SNAME(tr.his.state)} is ${pc(tr.his.band[0])} to ${pc(tr.his.band[1])}` : `${SNAME(tr.his.state)} is ${pc(tr.his.band[0])} to ${r0(scr.max)}`;
+  // E2 chart
+  const eFast={TE:3.4,TU:29,TP:19/24}, eSlow={TE:4.2,TU:34,TP:25/24}, COBJ="#5B4FA8";
+  const E2full=(tt,eHL,aiHL,im,l50)=>{ const T=Tat(tt,eHL), L=aiLoad(tt,aiHL); return prodE(T,tt)*(1-im*L/(L+l50)); };
+  const hisC=tt=>E2full(tt,null,hp.aiHL,hp.Imax,hp.L50), modC=tt=>E2at(tt);
+  const bLo=(im,l50,hl)=>tt=>Math.min(E2full(tt,eFast,hl*0.9,im,l50),E2full(tt,eFast,hl*1.1,im,l50),E2full(tt,eSlow,hl*0.9,im,l50),E2full(tt,eSlow,hl*1.1,im,l50));
+  const bHi=(im,l50,hl)=>tt=>Math.max(E2full(tt,eFast,hl*0.9,im,l50),E2full(tt,eFast,hl*1.1,im,l50),E2full(tt,eSlow,hl*0.9,im,l50),E2full(tt,eSlow,hl*1.1,im,l50));
+  const hisLo=bLo(hp.Imax,hp.L50,hp.aiHL), hisHi=bHi(hp.Imax,hp.L50,hp.aiHL);
+  const marks=DATA.inj.map(x=>({t:ms(x.t),kind:"inj"})).concat(DATA.ai.map(x=>({t:ms(x.t),kind:"ai"})));
+  const useObj=lineMode==="objective";
+  const chartLines=useObj?[NORM.lo,NORM.hi]:[cut.crbe,cut.besw,cut.swhi,cut.hiov];
+  const chartNames=useObj?["Low","Normal","High"]:["Crashed","Low","Sweet spot","High","Above ceiling"];
+  const tMin=t-v.back*3600000, tMax=t+v.fwd*3600000;
+  let eMax=Math.max.apply(null,chartLines), eMin=Math.min.apply(null,chartLines);
+  if(useObj) eMin=Math.min(eMin,NORM.bandLo);
+  for(let i=0;i<=60;i++){ const tt=Math.max(tMin,E2BLACKOUT)+(tMax-Math.max(tMin,E2BLACKOUT))*i/60; eMax=Math.max(eMax,hisHi(tt),modC(tt)); eMin=Math.min(eMin,hisLo(tt),modC(tt)); }
+  eMax=Math.ceil(eMax*1.04/10)*10; eMin=Math.max(0,Math.floor(eMin*0.95/10)*10);
+  let aiMax=0.3; for(let i=0;i<=40;i++){ aiMax=Math.max(aiMax,Lat(tMin+(tMax-tMin)*i/40)); }
+  const stY={crashed:Math.max(eMin+4,cut.crbe-8), below:(cut.crbe+cut.besw)/2, sweet_spot:(cut.besw+cut.swhi)/2, high_end:(cut.swhi+cut.hiov)/2, over:Math.min(eMax-4,cut.hiov+8)};
+  const dropped=hp.vr.droppedUnsure.concat(hp.vr.setAside||[], DATA.reports.filter(r=>r.cleared));
+  const feelMarks=DATA.reports.filter(r=>r.state).map(r=>({t:ms(r.t),y:stY[r.state],color:dropped.includes(r)?"#5F7A86":"#EAF4F8"}));
+  let center,lo,hi,centerColor,bandColor,overlay=null;
+  if(e2mode==="objective"){ center=modC; lo=bLo(M.Imax,M.L50,M.aiHL); hi=bHi(M.Imax,M.L50,M.aiHL); centerColor=COBJ; bandColor="rgba(91,79,168,0.22)"; }
+  else { center=hisC; lo=hisLo; hi=hisHi; centerColor="#4DB8D9"; bandColor="rgba(77,184,217,0.15)";
+    if(e2mode==="both"){ overlay={fn:modC,color:COBJ}; bandColor="transparent"; } }
+  const dnow=new Date(); dnow.setMinutes(dnow.getMinutes()-dnow.getTimezoneOffset()); const nowISO=dnow.toISOString().slice(0,16);
+  let previewFn=null, previewRead="";
+  if(previewDose>0){
+    previewFn = tt=>{ const T=Tat(tt), L=aiLoad(tt,hp.aiHL,[{t:nowISO,mg:previewDose}]); return prodE(T,tt)*(1-hp.Imax*L/(L+hp.L50)); };
+    let minE=1e9,minT=t; for(let h=0;h<=5*24;h+=1){ const w2=t+h*3600000, e=previewFn(w2); if(e<minE){minE=e;minT=w2;} }
+    previewRead=`${previewDose} mg now takes you to about ${r0(minE)} pmol, ${SNAME(stateOf(minE,cutoffs(hp.anchor,hp.ratio)))}, low point near ${Math.round((minT-t)/3600000)} h, then climbing back as it clears.`;
+  }
+  const crossings=stateCrossings(center,chartLines,chartNames,Math.max(tMin,E2BLACKOUT),tMax);
+  let tTop=40; for(let i=0;i<=80;i++){ const tt=tMin+(tMax-tMin)*i/80; tTop=Math.max(tTop,Tat(tt,eSlow),Tat(tt,eFast)); } tTop=Math.ceil(tTop*1.08/10)*10;
+  const line2 = chartShow==="et"
+    ? {fn:tt=>Tat(tt),max:tTop,color:"#EAF4F8",label:`testosterone (top of chart ${tTop} nmol/L)`}
+    : {fn:tt=>e2mode==="objective"?Lat(tt):aiLoad(tt,hp.aiHL),max:aiMax*1.1,color:"#EAF4F8",label:"AI on board",blackoutBefore:E2BLACKOUT};
+  const tcfgE={nowT:t,back:v.back,fwd:v.fwd,yMin:0,yMax:tTop,center:tt=>Tat(tt),lo:tt=>Math.min(Tat(tt,eFast),Tat(tt,eSlow)),hi:tt=>Math.max(Tat(tt,eFast),Tat(tt,eSlow)),
+    centerColor:"#4DB8D9",bandColor:"rgba(77,184,217,0.15)",marks:DATA.inj.map(x=>({t:ms(x.t),kind:"inj"})),
+    hlines:[{y:30,color:"#5D7488",label:"top of normal 30"}]};
+  const e2cfg={nowT:t,back:v.back,fwd:v.fwd,yMin:eMin,yMax:eMax,center,lo,hi,centerColor,bandColor,overlay,preview:previewFn?{fn:previewFn,color:"#F0C040"}:null,points:feelMarks,hideY:true,blackoutBefore:E2BLACKOUT,marks,crossings,
+    line2,
+    shades:useObj
+      ? [{y0:NORM.bandLo,y1:NORM.bandHi,color:"rgba(95,122,134,0.22)"}]   // grey: the studies disagree about where low begins
+      : [{y0:cut.besw,y1:cut.swhi,color:"rgba(42,138,143,0.14)"}],
+    hlines:useObj
+      ? [{y:NORM.lo,color:"#5D7488",label:"normal low "+NORM.lo},{y:NORM.hi,color:"#5D7488",label:"normal high "+NORM.hi}]
+      : [{y:cut.crbe,color:"#5D7488",label:"crashed"},{y:cut.besw,color:"#5D7488",label:"sweet"},{y:cut.swhi,color:"#5D7488",label:"high"},{y:cut.hiov,color:"#5D7488",label:"over"}]};
+  $("#v-estrogen").innerHTML = trendCard + `
+    <div class="two">
+      <div class="card"><div class="row"><h2>Objective</h2>${iBtn('model')}</div>
+        <div class="big">${r0(tr.model.e)}<span class="unit"> pmol/L</span></div>
+        <div class="state" style="margin-top:8px">${normName(tr.model.e)}</div>
+        <div class="sub mono" style="margin-top:6px">Normal range: ${NORM.lo} to ${NORM.hi} pmol/L</div></div>
+      <div class="card"><div class="row"><h2>Your estimate</h2>${iBtn('his')}</div>
+        <div class="big">${r0(scr.show(tr.his.e))}</div>
+        <div class="state" style="margin-top:8px">${SNAME(tr.his.state)}</div>
+        <div class="sub mono" style="margin-top:6px">${pctTxt}</div>
+</div>
+    </div>
+    <div class="card"><div class="row"><div class="lab">How much is yours</div>${iBtn('weight')}</div>
+      <div class="big" style="font-size:24px;margin-top:4px">${r0(w*100)}<span class="unit"> %</span></div>
+      <div class="sub">You lead; the app is a second opinion.</div></div>
+    <div class="card"><div class="row"><h2>Estradiol trajectory</h2>${iBtn('e2chart')}</div>
+      <div style="margin:0 -12px">${svgChart(chartShow==="t"?tcfgE:e2cfg)}</div>
+      ${chartShowToggle()}
+      ${chartShow==="t"?"":e2ModeToggle()}
+      ${chartShow==="t"?"":lineToggle()}
+      ${viewToggle('renderEstrogen')}</div>
+    <div class="card"><div class="row"><h2>Try a dose</h2>${iBtn('trydose')}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px">
+        ${[0,0.12,0.25,0.5].map(d=>pill(previewDose===d, d===0?"Off":d+" mg", `previewDose=${d};renderEstrogen()`)).join("")}
+      </div>
+      ${previewRead?`<div class="sub">${previewRead}</div><div class="sub faint" style="margin-top:4px">Shown dashed amber on the graph. A projection, not a logged dose.</div>`:`<div class="sub">Pick an amount to see where it would take you, dashed on the graph above.</div>`}</div>
+    `;
+}
+
+let plannerThr=30;
+function renderTest(){
+  const t=Date.now(), T=Tat(t), v=VIEWS[trendsView], H=effHalf();
+  const shb=shbgAt(t);
+  const freePct=freeT(T,shb), freeAbs=T*freePct/100;
+  const freeCeil=30*freeT(30,shb)/100, freeMult=freeAbs/freeCeil; // free at the top of the normal total range, at your SHBG
+  const cc=Tcomp(t), pTE=Math.round(100*cc.TE/cc.total), pTU=Math.round(100*cc.TU/cc.total), pTP=Math.round(100*cc.TP/cc.total);
+  INFO.T={t:"Total testosterone",body:`<p>${r0(T)} nmol/L, sum of all logged injections under absorption-limited release. Lab reference 10 to 30. ${(T/30).toFixed(1)}x the top of that range.</p>
+    <p class="k">Half-lives in force: enanthate ${r1(H.TE)} d, undecanoate ${r1(H.TU)} d, propionate ${r0(H.TP*24)} h. Scale x${CORR.S.toFixed(2)}. ${CORR.nDraws?`From ${CORR.nDraws} blood draw${CORR.nDraws>1?'s':''}${CORR.provisional?', provisional':''}.`:'No blood draws yet; literature values.'}</p>`};
+  INFO.free={t:"Free testosterone",body:`<p>${r1(freeAbs)} nmol/L, ${freeMult.toFixed(1)}x the top of normal. CALCULATED from total and SHBG ${r1(shb)} by Vermeulen, not a second measurement.</p>
+    <p class="k">The multiple is against the free T you would have at the top of the normal total range (30 nmol/L) at your own SHBG, about ${r1(freeCeil)} nmol/L. It runs a touch above the total multiple because your low SHBG gives you more free per unit as T rises.</p>
+    <p class="k">SHBG ${r1(shb)} is ${(DATA.factors||[]).some(x=>x.shbg!=null)||(DATA.blood||[]).some(x=>x.shbg!=null)?"your latest logged value":"the default; log a measured SHBG under Body and labs and it feeds here live"}. At SHBG 20 the fraction would be ${r1(freeT(T,20))}%.</p>`};
+  INFO.tchart={t:"Testosterone trajectory",body:`<p>Total T in nmol/L, band from the ester half-life ranges (TE 3.4 to 4.2 d, TU 29 to 34 d, TP 19 to 25 h), narrow over history, widening forward. History is drawn the whole way; the pre-12.10 blackout is estradiol only.</p>
+    <p class="k">Backward is history, forward assumes no further injections or doses. 10 to 30 is your normal range; the yellow line at 35 is where testosterone starts driving estradiol again.</p>
+    <p class="k">Read where you will be from the curve and adjust. You stop enanthate about 40 days out and propionate about 4 days out, so by a draw date you sit below threshold on undecanoate.</p>`};
+  INFO.lookup={t:"Level on a date",body:`<p>The model's total testosterone for any date you pick, past or future, read against your lab range 10 to 30. For a future date it assumes no injections beyond the last you logged.</p>
+    <p class="k">Use it when a draw is scheduled: enter the date and see where you will sit, and how much of it is undecanoate.</p>`};
+  INFO.breakdown={t:"What makes up the level",body:`<p>Your total T right now, split by ester: enanthate ${pTE}%, undecanoate ${pTU}%, propionate ${pTP}%. A snapshot of this moment, not over time.</p>
+    <p class="k">Undecanoate is the slow base. Enanthate is the weekly layer on top. Propionate is the short spike that clears in a couple of days.</p>
+    <p class="k">This is why timing a draw works: stop enanthate and propionate and the pie collapses to almost all undecanoate, which is what you read in range.</p>`};
+  // chart
+  const eFast={TE:3.4,TU:29,TP:19/24}, eSlow={TE:4.2,TU:34,TP:25/24};
+  const marks=DATA.inj.map(x=>({t:ms(x.t),kind:"inj"})).concat(DATA.ai.map(x=>({t:ms(x.t),kind:"ai"})));
+  const tMin=t-v.back*3600000, tMax=t+v.fwd*3600000; let tMax2=35;
+  for(let i=0;i<=60;i++){ tMax2=Math.max(tMax2,Tat(tMin+(tMax-tMin)*i/60,eSlow)); }
+  tMax2=Math.ceil(tMax2*1.04/20)*20;
+  const tcfg={nowT:t,back:v.back,fwd:v.fwd,yMin:0,yMax:tMax2,center:tt=>Tat(tt),lo:tt=>Tat(tt,eFast),hi:tt=>Tat(tt,eSlow),marks,
+    shades:[{y0:10,y1:30,color:"rgba(42,138,143,0.14)"}],
+    hlines:[{y:30,color:"#5D7488",label:"30 top of range"},{y:10,color:"#5D7488",label:"10 bottom"},{y:35,color:"#F0C040",label:"35 saturation"}]};
+  // planner
+  let reviewCard="";
+  (DATA.blood||[]).forEach((b,i)=>{ if(b.review && !b.reviewDismissed){ const r=b.review, name=({TE:"enanthate",TU:"undecanoate",TP:"propionate"})[r.dom];
+    const pct=Math.round(Math.abs(r.gap)*100), dir=r.gap<0?'below':'above';
+    const body = r.mixed
+      ? `The ${fmtDay(b.t)} result was ${pct}% ${dir} prediction. No single ester dominated the sample, so the gap went mostly to scale, clearance x bioavailability, now x${CORR.S.toFixed(2)}.`
+      : `The ${fmtDay(b.t)} result was ${pct}% ${dir} prediction. ${name} supplied ${r.domShare}% of that sample, so it is the parameter to question. The attribution has already done what the clamps allow; the literature value may need revisiting outside the app.`;
+    reviewCard += `<div class="card alert"><div class="row"><h2>${r.mixed?'Review scale':'Review '+name+' half-life'}</h2><button class="i" onclick="dismissReview(${i})">x</button></div>
+      <div class="sub">${body}</div></div>`; } });
+  $("#v-test").innerHTML= reviewCard + `
+    <div class="card"><div class="two" style="gap:10px">
+      <div>
+        <div class="lab">Total ${iBtn('T')}</div>
+        <div class="big" style="font-size:24px;margin-top:4px">${r0(T)}<span class="unit" style="color:var(--text)"> nmol/L</span></div>
+        <div class="mono" style="font-size:11px;margin-top:3px;margin-left:42px;color:#F0C040">${(T/30).toFixed(1)}x</div>
+      </div>
+      <div style="text-align:right">
+        <div class="lab">Free, calc ${iBtn('free')}</div>
+        <div class="big" style="font-size:24px;margin-top:4px">${r1(freeAbs)}<span class="unit" style="color:var(--text)"> nmol/L</span></div>
+        <div class="mono" style="font-size:11px;margin-top:3px;margin-right:42px;color:#F0C040">${freeMult.toFixed(1)}x</div>
+      </div>
+    </div></div>
+    <div class="card"><div class="row"><h2>Testosterone trajectory</h2>${iBtn('tchart')}</div>
+      <div style="margin:0 -12px">${svgChart(tcfg)}</div>
+      ${viewToggle('renderTest')}
+      ${T<35?`<div class="notice warn">Testosterone is below 35 nmol/L: it now drives estradiol again.</div>`:""}</div>
+    <div class="card"><div class="row"><h2>What makes up the level</h2>${iBtn('breakdown')}</div>
+      ${pieChart(t)}
+      <div class="mono" style="font-size:12px;display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:8px">
+        <span style="color:${ESTCOL.TE}">&#9632; enanthate ${pTE}%</span>
+        <span style="color:${ESTCOL.TU}">&#9632; undecanoate ${pTU}%</span>
+        <span style="color:${ESTCOL.TP}">&#9632; propionate ${pTP}%</span>
+      </div>
+      <div class="sub" style="text-align:center;margin-top:6px">share of your ${r0(T)} nmol/L right now</div></div>
+    <div class="card"><div class="row"><h2>Level on a date</h2>${iBtn('lookup')}</div>
+      ${dtField('lkd','lkt',todayISO(),'08:00')}
+      <div id="lookupOut" style="margin-top:10px"></div></div>`;
+  wireTimeInputs();
+  const upd=()=>updateLookup(); const ld=$("#lkd"), lt=$("#lkt");
+  if(ld) ld.oninput=upd; if(lt) lt.addEventListener("input",upd);
+  updateLookup();
+}
+function updateLookup(){
+  const out=$("#lookupOut"); if(!out) return;
+  const t=readDT('lkd','lkt'); if(!t){ out.innerHTML=`<div class="sub faint">Enter a date and a 24h time.</div>`; return; }
+  const when=ms(t), Tv=Tat(when), c=Tcomp(when), pTU=c.total>0?Math.round(100*c.TU/c.total):0;
+  const ctx = Tv>30?`${(Tv/30).toFixed(1)}x over the top of normal (30)` : Tv<10?`below the normal range` : `inside the normal range (10 to 30)`;
+  const fwd = when>Date.now() ? ` Assumes no injections after the last logged one.` : "";
+  out.innerHTML=`<div class="big" style="font-size:24px">${r0(Tv)}<span class="unit" style="color:var(--text)"> nmol/L</span></div>
+    <div class="sub" style="margin-top:4px">${ctx}. About ${pTU}% undecanoate.${fwd}</div>`;
+}
+
+function renderLog(){
+  let st={state:null,sure:true};
+  INFO.factorsinfo={t:"Body and labs",body:`<p>SHBG does real work: it sits in the free-T calc, so a measured value updates free T from its date forward and nothing else. Default is 9 until you log one.</p>
+    <p class="k">Body fat shifts the whole estradiol curve by a fixed study number: +2% estradiol per 10 points of body fat (Lakshman 2010). It is not learned. Between your body fat logs the app draws a straight line, so logs on the way from 18 to 17% get their real value. Weight is recorded only.</p>
+    <p class="k">Log whenever a value changes. Each entry is timestamped; blanks are fine.</p>`};
+  INFO.sureinfo={t:"Sure or unsure",body:`<p>Sure means you stand behind the read. It counts 1x and stays. Super sure is for days you are certain: it counts ${SUPER_SURE}x.</p>
+    <p class="k">Unsure means a real but soft read. It is held provisionally: your later sure reports keep it if it sits on the path they trace, or drop it to zero if it does not. Dropped ones aren't erased, they show faint on the graph and come back if later logs vindicate them.</p>
+    <p class="k">Skip a day you genuinely can't read; a blank costs nothing.</p>`};
+  const chips=STATE.map(s=>`<div class="chip" data-k="${s.k}">${LNAME(s.k)}</div>`).join("")+
+    `<div class="chip" data-k="ambiguous">Ambiguous</div>`;
+  $("#v-log").innerHTML=`
+    <div class="card">
+      <h2>Log an injection</h2>
+      <div class="two">
+        <label class="fl"><div class="field-lab">Ester</div><select id="injes">
+          <option value="TE">Enanthate</option><option value="TU">Undecanoate</option><option value="TP">Propionate</option></select></label>
+        <label class="fl"><div class="field-lab">mg</div><input type="text" id="injmg" inputmode="decimal" placeholder="300"></label>
+      </div>
+      ${dtField('injd','injt',todayISO(),nowHM())}
+      <button class="act sm" style="margin-top:12px" id="saveInj">Add injection</button>
+    </div>
+    <div class="card">
+      <h2>Log anastrozole</h2>
+      <label class="fl"><div class="field-lab">mg</div><input type="text" id="aimg" inputmode="decimal" placeholder="0.12"></label>
+      ${dtField('aid','ait',todayISO(),nowHM())}
+      <button class="act primary sm" style="margin-top:12px" id="saveAi">Add dose</button>
+    </div>
+    <div class="card">
+      <h2>Log how you feel</h2>
+      <div class="field-lab">State (hold to read its meaning)</div>
+      <div class="chips" id="stchips">${chips}</div>
+      <div class="field-lab" style="margin-top:12px">Confidence ${iBtn('sureinfo')}</div>
+      <div class="chips" id="surechips">
+        <div class="chip sel" data-s="sure">Sure</div>
+        <div class="chip" data-s="unsure">Unsure</div>
+        <div class="chip" data-s="super">Super sure</div>
+      </div>
+      <label class="fl"><div class="field-lab">Your words</div><textarea id="lgnote" placeholder="exactly what you notice"></textarea></label>
+      ${dtField('lgd','lgt',todayISO(),nowHM())}
+      <button class="act sm" style="margin-top:12px" id="saveReport">Save report</button>
+      <div class="notice">Sure counts 1x. Super sure counts ${SUPER_SURE}x. Unsure counts only if it fits your sure logs. A Low or High log that contradicts a sweet spot log is set aside unless it is more confident.</div>
+    </div>
+    <div class="card">
+      <h2>Log a blood result</h2>
+      <div class="two">
+        <label class="fl"><div class="field-lab">Total T, nmol/L</div><input type="text" id="bltt" inputmode="decimal" placeholder="e.g. 22"></label>
+        <label class="fl"><div class="field-lab">SHBG, nmol/L</div><input type="text" id="blshbg" inputmode="decimal" placeholder="9"></label>
+      </div>
+      <label class="fl"><div class="field-lab">Free T (optional)</div><input type="text" id="blft" inputmode="decimal" placeholder="lab value"></label>
+      ${dtField('bld','blt',todayISO(),'08:00')}
+      <button class="act sm" style="margin-top:12px" id="saveBlood">Add blood result</button>
+      <div class="notice">The value always goes in and corrects the model. Draws accumulate, never replace.</div>
+    </div>
+    <div class="card">
+      <h2>Body &amp; labs ${iBtn('factorsinfo')}</h2>
+      <div class="two">
+        <label class="fl"><div class="field-lab">Weight, kg</div><input type="text" id="fcw" inputmode="decimal" placeholder="e.g. 100"></label>
+        <label class="fl"><div class="field-lab">Body fat, %</div><input type="text" id="fcbf" inputmode="decimal" placeholder="e.g. 18"></label>
+      </div>
+      <label class="fl"><div class="field-lab">SHBG, nmol/L (from a lab)</div><input type="text" id="fcshbg" inputmode="decimal" placeholder="9"></label>
+      ${dtField('fcd','fct',todayISO(),nowHM())}
+      <button class="act sm" style="margin-top:12px" id="saveFactor">Log body &amp; labs</button>
+      <div class="notice">SHBG feeds free T live. Body fat shifts estrogen by a fixed study number, about 2% per 10 points, filled in between your logs. Weight is recorded only.</div>
+    </div>
+    <div class="card"><h2>Recent entries</h2>${recentList()}</div>`;
+
+  // state chips: tap select, long-press describe
+  document.querySelectorAll("#stchips .chip").forEach(c=>{
+    let timer=null,long=false;
+    const describe=()=>{ if(c.dataset.k!=="ambiguous") return; long=true;
+      openInfoRaw("Ambiguous","Mixed signals that fit more than one state. Stored on the ambiguous list, not forced into a state.");};
+    c.addEventListener("touchstart",()=>{long=false;timer=setTimeout(describe,500)},{passive:true});
+    c.addEventListener("touchend",()=>{clearTimeout(timer); if(!long)selChip(c)});
+    c.addEventListener("mousedown",()=>{long=false;timer=setTimeout(describe,500)});
+    c.addEventListener("mouseup",()=>{clearTimeout(timer); if(!long)selChip(c)});
+    c.addEventListener("contextmenu",e=>e.preventDefault());
+  });
+  function selChip(c){ document.querySelectorAll("#stchips .chip").forEach(x=>x.classList.remove("sel")); c.classList.add("sel"); st.state=c.dataset.k; }
+  document.querySelectorAll("#surechips .chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll("#surechips .chip").forEach(x=>x.classList.remove("sel")); c.classList.add("sel"); st.sure=c.dataset.s!=="unsure"; st.superSure=c.dataset.s==="super"; });
+
+  wireTimeInputs();
+  $("#saveReport").onclick=()=>{
+    if(!st.state){ toast("Pick a state"); return; }
+    const t=readDT('lgd','lgt'); if(!t){toast("Time must be 24h, e.g. 16:00");return;} if(future(t))return;
+    const note=$("#lgnote").value.trim();
+    const tr=tracks(ms(t));
+    const rep={t,note,seeded:false,sure:st.sure}; if(st.superSure) rep.superSure=true;
+    if(st.state==="ambiguous"){ rep.state=null; rep.ambiguous=true; }
+    else { rep.state=st.state; }
+    rep.predictedState=tr.model.state; rep.predictedE2=r0(tr.model.e); // prospective: model first
+    DATA.reports.push(rep); DATA.reports.sort((a,b)=>ms(a.t)-ms(b.t)); snapshotAnchor(); save();
+    toast("Report saved"); renderLog();
+  };
+  $("#saveInj").onclick=()=>{ const mg=num("#injmg"), t=readDT('injd','injt');
+    if(!mg){toast("Enter mg");return;} if(!inR(mg,10,2000,"Injection mg"))return; if(!t){toast("Time must be 24h, e.g. 16:00");return;}
+    if(future(t))return; DATA.inj.push({t,ester:$("#injes").value,mg}); DATA.inj.sort((a,b)=>ms(a.t)-ms(b.t)); if(DATA.blood.length)recomputeCorrection(); save(); toast("Injection added"); renderLog(); };
+  $("#saveAi").onclick=()=>{ const mg=num("#aimg"), t=readDT('aid','ait');
+    if(!mg){toast("Enter mg");return;} if(!inR(mg,0.01,2,"Anastrozole mg"))return; if(!t){toast("Time must be 24h, e.g. 16:00");return;}
+    if(future(t))return; DATA.ai.push({t,mg}); DATA.ai.sort((a,b)=>ms(a.t)-ms(b.t)); save(); toast("Dose added"); renderLog(); };
+  $("#saveBlood").onclick=()=>{ const tt=num("#bltt"), shbg=num("#blshbg"), ft=num("#blft"), t=readDT('bld','blt');
+    if(!tt){toast("Enter total T");return;} if(!inR(tt,0.1,300,"Total T nmol/L"))return; if(shbg&&!inR(shbg,1,150,"SHBG"))return; if(ft&&!inR(ft,0.01,10,"Free T, in nmol/L,"))return; if(!t){toast("Time must be 24h, e.g. 08:00");return;}
+    if(future(t))return; const rev=drawReview({t,tt});                         // review flag BEFORE correction closes the gap
+    const b={t,tt,shbg:shbg||null,ft:ft||null}; if(rev)b.review=rev;
+    DATA.blood.push(b); DATA.blood.sort((a,b)=>ms(a.t)-ms(b.t));
+    recomputeCorrection(); save();
+    toast(rev?`Saved. Review ${({TE:"enanthate",TU:"undecanoate",TP:"propionate"})[rev.dom]}`:"Blood result saved"); renderLog(); };
+  $("#saveFactor").onclick=()=>{ const w=num("#fcw"), bf=num("#fcbf"), shbg=num("#fcshbg"), t=readDT('fcd','fct');
+    if(!t){toast("Time must be 24h");return;} if(!w&&!bf&&!shbg){toast("Enter at least one value");return;}
+    if(w&&!inR(w,40,250,"Weight kg"))return; if(bf&&!inR(bf,3,50,"Body fat %"))return; if(shbg&&!inR(shbg,1,150,"SHBG"))return;
+    if(future(t))return; const f={t}; if(w)f.weight=w; if(bf)f.bodyfat=bf; if(shbg)f.shbg=shbg;
+    DATA.factors.push(f); DATA.factors.sort((a,b)=>ms(a.t)-ms(b.t)); save();
+    toast(shbg?"Logged, SHBG now feeds free T":"Logged"); renderLog(); };
+}
+function inR(x,lo,hi,lab){ if(x>=lo&&x<=hi) return true; toast(`${lab} must be ${lo} to ${hi}`); return false; }
+function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function nowHM(){ const d=new Date(); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function dtField(idD,idT,dd,tt){ const arrow=`flex:0 0 auto;width:40px;min-height:52px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--accent);font-size:20px;line-height:1;cursor:pointer`;
+  return `<div class="two">
+  <label class="fl"><div class="field-lab">Date</div>
+    <div style="display:flex;gap:6px">
+      <button type="button" onclick="shiftDay('${idD}',-1)" style="${arrow}">&lsaquo;</button>
+      <input type="date" id="${idD}" value="${dd}" style="flex:1;min-width:0">
+      <button type="button" onclick="shiftDay('${idD}',1)" style="${arrow}">&rsaquo;</button>
+    </div></label>
+  <label class="fl"><div class="field-lab">Time (24h)</div><input type="text" id="${idT}" class="tfield" value="${tt}" inputmode="numeric" placeholder="16:00" maxlength="5"></label></div>`; }
+function shiftDay(id,delta){ const el=$("#"+id); if(!el)return; const p=(el.value||todayISO()).split("-").map(Number);
+  const d=new Date(p[0],p[1]-1,p[2]); d.setDate(d.getDate()+delta);
+  el.value=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function future(t){ if(ms(t)>Date.now()+24*3600000){ toast("That time is more than a day ahead. Check the date."); return true; } return false; }   // typo guard: no logs dated more than a day ahead
+function readDT(idD,idT){ const d=$("#"+idD).value, raw=($("#"+idT).value||"").trim();
+  let h,mn, m=raw.match(/^(\d{1,2}):([0-5]\d)$/);
+  if(m){ h=+m[1]; mn=m[2]; }
+  else { const dig=raw.replace(/\D/g,"");
+    if(dig.length===4){ h=+dig.slice(0,2); mn=dig.slice(2); }
+    else if(dig.length===3){ h=+dig.slice(0,1); mn=dig.slice(1); }
+    else return null; }
+  if(!d||h>23||+mn>59) return null;
+  return d+"T"+String(h).padStart(2,"0")+":"+mn; }
+function wireTimeInputs(){ document.querySelectorAll(".tfield").forEach(inp=>{
+  inp.addEventListener("input",()=>{ const dig=inp.value.replace(/\D/g,"").slice(0,4);
+    inp.value = dig.length===4 ? dig.slice(0,2)+":"+dig.slice(2) : dig; }); }); }
+function openInfoRaw(title,body){ $("#sheet").innerHTML=`<h4>${title}</h4><p>${body}</p>`; $("#sheetbg").classList.add("on"); }
+function recentList(){
+  const items=[];
+  DATA.inj.forEach(x=>items.push({t:x.t,txt:`${x.mg} mg ${({TE:"enanthate",TU:"undecanoate",TP:"propionate"})[x.ester]}`,tag:"inj"}));
+  DATA.ai.forEach(x=>items.push({t:x.t,txt:`${x.mg} mg anastrozole`,tag:"ai"}));
+  DATA.reports.forEach(x=>items.push({t:x.t,txt:x.ambiguous?`"${x.note}" (ambiguous)`:`${LNAME(x.state)}`,tag:"you"}));
+  (DATA.blood||[]).forEach(x=>items.push({t:x.t,txt:`blood: T ${x.tt} nmol/L`,tag:"blood"}));
+  (DATA.factors||[]).forEach(x=>{ const p=[]; if(x.weight!=null)p.push(`${x.weight} kg`); if(x.bodyfat!=null)p.push(`${x.bodyfat}% fat`); if(x.shbg!=null)p.push(`SHBG ${x.shbg}`); items.push({t:x.t,txt:`body: ${p.join(", ")}`,tag:"body"}); });
+  items.sort((a,b)=>ms(b.t)-ms(a.t));
+  return items.slice(0,12).map(i=>`<div class="list-row"><span>${i.txt}</span><span class="faint mono" style="font-size:12px">${fmtDT(i.t)}</span></div>`).join("");
+}
+
+let trendsView="week";
+const VIEWS={day:{back:12,fwd:12,label:"Day"},week:{back:0,fwd:168,label:"Week"},tenday:{back:120,fwd:120,label:"10 days"},month:{back:72,fwd:720,label:"Month"}};
+const E2BLACKOUT=ms("2026-10-12T16:00");
+const MONO="'Space Mono',monospace";
+
+function svgChart(cfg){
+  const W=680,H=430,padL=(cfg.hideY?12:46),padR=12,padT=18,padB=42, now=cfg.nowT;
+  const tMin=now-cfg.back*3600000, tMax=now+cfg.fwd*3600000, short=(cfg.back+cfg.fwd)<=24;
+  const X=t=>padL+(t-tMin)/(tMax-tMin)*(W-padL-padR);
+  const Y=v=>padT+(1-(v-cfg.yMin)/(cfg.yMax-cfg.yMin))*(H-padT-padB);
+  const start=cfg.blackoutBefore?Math.max(tMin,cfg.blackoutBefore):tMin, N=100;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="display:block">`;
+  for(const sh of (cfg.shades||[])) s+=`<rect x="${padL}" y="${Y(sh.y1).toFixed(1)}" width="${(W-padL-padR).toFixed(1)}" height="${Math.abs(Y(sh.y0)-Y(sh.y1)).toFixed(1)}" fill="${sh.color}"/>`;
+  s+=`<rect x="${X(now).toFixed(1)}" y="${padT}" width="${(W-padR-X(now)).toFixed(1)}" height="${H-padT-padB}" fill="rgba(95,122,134,0.08)"/>`;
+  for(const hl of (cfg.hlines||[])){ const y=Y(hl.y).toFixed(1);
+    s+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="${hl.color}" stroke-width="1" stroke-dasharray="${hl.dash||'4 4'}"/>`;
+    if(hl.label) s+=`<text x="${(W-padR-2)}" y="${(+y-3).toFixed(1)}" fill="${hl.color}" font-family="${MONO}" font-size="9" text-anchor="end" letter-spacing="1">${hl.label}</text>`; }
+  const pts=[]; for(let i=0;i<=N;i++){ const t=start+(tMax-start)*i/N; pts.push({t,lo:cfg.lo(t),hi:cfg.hi(t),c:cfg.center(t)}); }
+  let up=""; pts.forEach((p,i)=>{ up+=(i?"L":"M")+X(p.t).toFixed(1)+" "+Y(p.hi).toFixed(1)+" "; });
+  for(let i=pts.length-1;i>=0;i--) up+="L"+X(pts[i].t).toFixed(1)+" "+Y(pts[i].lo).toFixed(1)+" ";
+  s+=`<path d="${up}Z" fill="${cfg.bandColor||'rgba(77,184,217,0.15)'}"/>`;
+  let cl=""; pts.forEach((p,i)=>{ cl+=(i?"L":"M")+X(p.t).toFixed(1)+" "+Y(p.c).toFixed(1)+" "; });
+  s+=`<path d="${cl}" fill="none" stroke="${cfg.centerColor||'#4DB8D9'}" stroke-width="1.6"/>`;
+  if(cfg.overlay){ let o=""; for(let i=0;i<=N;i++){ const t=start+(tMax-start)*i/N; o+=(i?"L":"M")+X(t).toFixed(1)+" "+Y(cfg.overlay.fn(t)).toFixed(1)+" "; }
+    s+=`<path d="${o}" fill="none" stroke="${cfg.overlay.color}" stroke-width="1.9"/>`; }
+  if(cfg.preview){ const s0=Math.max(now,start); let pv="";
+    for(let i=0;i<=N;i++){ const t2=s0+(tMax-s0)*i/N; pv+=(i?"L":"M")+X(t2).toFixed(1)+" "+Y(cfg.preview.fn(t2)).toFixed(1)+" "; }
+    s+=`<path d="${pv}" fill="none" stroke="${cfg.preview.color}" stroke-width="1.8" stroke-dasharray="5 3"/>`; }
+  if(cfg.line2){ const L=cfg.line2, lm=L.max||1, yy=v=>padT+(1-Math.max(0,Math.min(1,v/lm)))*(H-padT-padB);
+    const s0=cfg.line2.blackoutBefore?Math.max(tMin,cfg.line2.blackoutBefore):tMin;
+    let p2=""; for(let i=0;i<=N;i++){ const t=s0+(tMax-s0)*i/N; p2+=(i?"L":"M")+X(t).toFixed(1)+" "+yy(L.fn(t)).toFixed(1)+" "; }
+    s+=`<path d="${p2}" fill="none" stroke="${L.color}" stroke-width="1.2" stroke-dasharray="2 3" opacity="0.9"/>`;
+    s+=`<text x="${padL+3}" y="${padT+10}" fill="${L.color}" font-family="${MONO}" font-size="9">${L.label}</text>`; }
+  if(cfg.blackoutBefore&&cfg.blackoutBefore>tMin){ const x=X(cfg.blackoutBefore);
+    s+=`<rect x="${padL}" y="${padT}" width="${(x-padL).toFixed(1)}" height="${H-padT-padB}" fill="rgba(4,12,16,0.6)"/>`;
+    s+=`<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${H-padB}" stroke="#5D7488" stroke-dasharray="3 3"/>`;
+    s+=`<text x="${(x-4).toFixed(1)}" y="${padT+10}" fill="#5F7A86" font-family="${MONO}" font-size="9" text-anchor="end">unlogged AI</text>`; }
+  if(cfg.crossings&&cfg.crossings.length){ const rows=[], CW=7.4;   // label font 12 in a 680-wide chart, about 6.5 px on a phone
+    for(const c of cfg.crossings){ if(c.t<tMin||c.t>tMax) continue; const x=X(c.t), d=new Date(c.t);
+      const hm=d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}), dm=d.toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit"});
+      const txt=(short?hm:`${dm} ${hm}`)+" "+(c.up?"\u2191":"\u2193")+" "+c.to, w=txt.length*CW+8;
+      const right=x+w>W-padR; const x0=right?x-w:x;
+      let r=0; while(rows[r]!=null && x0<rows[r]+4) r++; rows[r]=x0+w;
+      const y=padT+26+r*17;
+      s+=`<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${H-padB}" stroke="#9FBAC6" stroke-width="1" stroke-dasharray="2 3" opacity="0.8"/>`;
+      s+=`<rect x="${(right?x-w:x).toFixed(1)}" y="${(y-12).toFixed(1)}" width="${w.toFixed(1)}" height="16" rx="3" fill="rgba(6,24,31,0.88)"/>`;
+      s+=`<text x="${(right?x-4:x+4).toFixed(1)}" y="${y.toFixed(1)}" fill="#EAF4F8" font-family="${MONO}" font-size="12" text-anchor="${right?"end":"start"}">${txt}</text>`; } }
+  const nx=X(now).toFixed(1);
+  s+=`<line x1="${nx}" y1="${padT}" x2="${nx}" y2="${H-padB}" stroke="#4DB8D9" opacity="0.85"/>`;
+  s+=`<text x="${nx}" y="${padT+9}" fill="#4DB8D9" font-family="${MONO}" font-size="9" text-anchor="middle">now</text>`;
+  s+=`<text x="${W-padR-2}" y="${H-padB-5}" fill="#5F7A86" font-family="${MONO}" font-size="8.5" text-anchor="end">no further doses</text>`;
+  for(const m of (cfg.marks||[])){ if(m.t<tMin||m.t>tMax)continue; const x=X(m.t).toFixed(1), yb=H-padB;
+    if(m.kind==="inj") s+=`<path d="M${x} ${yb-8} l3 6 l-6 0 Z" fill="#4DB8D9"/>`;
+    else s+=`<circle cx="${x}" cy="${(yb-3)}" r="2.3" fill="#F0C040"/>`; }
+  for(const p of (cfg.points||[])){ if(p.t<tMin||p.t>tMax)continue; const x=X(p.t).toFixed(1), y=Y(p.y).toFixed(1);
+    s+=`<circle cx="${x}" cy="${y}" r="4.6" fill="rgba(6,24,31,0.9)" stroke="${p.color||'#EAF4F8'}" stroke-width="1.8"/>`; }
+  if(!cfg.hideY) for(const v of [cfg.yMin,(cfg.yMin+cfg.yMax)/2,cfg.yMax]){ const y=Y(v).toFixed(1);
+    s+=`<text x="${padL-5}" y="${(+y+5).toFixed(1)}" fill="#9FBAC6" font-family="${MONO}" font-size="15" text-anchor="end">${Math.round(v)}</text>`; }
+  const tk=short?4:5;
+  for(let i=0;i<=tk;i++){ const t=tMin+(tMax-tMin)*i/tk, x=X(t);
+    const lab=short?new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):new Date(t).toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit"});
+    const anc=i===0?"start":i===tk?"end":"middle";
+    s+=`<line x1="${x.toFixed(1)}" y1="${H-padB}" x2="${x.toFixed(1)}" y2="${(H-padB+5).toFixed(1)}" stroke="#5F7A86" stroke-width="1"/>`;
+    s+=`<text x="${x.toFixed(1)}" y="${H-padB+20}" fill="#9FBAC6" font-family="${MONO}" font-size="15" text-anchor="${anc}">${lab}</text>`; }
+  s+=`<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="rgba(77,184,217,0.16)"/></svg>`;
+  return s;
+}
+
+function renderData(){
+  const H=effHalf();
+  const corrCard = CORR.nDraws ? `<div class="card"><h2>Correction from blood</h2>
+    <p class="sub">${CORR.nDraws} draw${CORR.nDraws>1?'s':''}${CORR.provisional?', provisional (one draw cannot separate a wrong half-life from wrong clearance)':''}.</p>
+    <div class="list-row"><span>Enanthate half-life</span><span class="mono">${r1(H.TE)} d</span></div>
+    <div class="list-row"><span>Undecanoate half-life</span><span class="mono">${r1(H.TU)} d</span></div>
+    <div class="list-row"><span>Propionate half-life</span><span class="mono">${r0(H.TP*24)} h</span></div>
+    <div class="list-row"><span>Scale (clearance x bioavailability)</span><span class="mono">x${CORR.S.toFixed(2)}</span></div></div>` : "";
+  $("#v-data").innerHTML=`${corrCard}
+    <button class="menu-btn" onclick="showWords()">Words <span>vocabulary index</span></button>
+    <button class="menu-btn" onclick="showValidation()">Validation <span>predicted vs reported</span></button>
+    <button class="menu-btn" onclick="showChecks()">Checks <span>build assertions</span></button>
+    <button class="menu-btn" onclick="showScale()">Scale <span>your state boundaries now</span></button>
+    <button class="menu-btn" onclick="showCurve()">Learning <span>what is learned from your logs</span></button>
+    <button class="menu-btn" onclick="showKey()">Key <span>what the chart marks mean</span></button>
+    <button class="menu-btn" onclick="showEntries()">Entries <span>everything logged</span></button>
+    <button class="menu-btn" onclick="showRefs()">Reference ranges <span>normal male estrogen and testosterone</span></button>
+    <button class="menu-btn" onclick="showTerms()">Terms <span>every term defined</span></button>
+    <button class="menu-btn" onclick="doExport()">Export <span>copy / share</span></button>
+    <button class="menu-btn" onclick="showImport()">Import <span>restore from an export</span></button>
+    <div id="morepane"></div>`;
+}
+function dismissReview(i){ if(DATA.blood&&DATA.blood[i]){ DATA.blood[i].reviewDismissed=true; save(); renderTest(); } }
+function delEntry(id){
+  ["inj","ai","reports","blood","factors"].forEach(k=>{ DATA[k]=(DATA[k]||[]).filter(x=>x.id!==id); });
+  setShbgFromBlood();
+  if(DATA.blood.length) recomputeCorrection(); else { CORR={dTE:0,dTU:0,dTP:0,S:1,provisional:false,nDraws:0,informs:{TE:0,TU:0,TP:0}}; saveCorr(); }
+  save(); showEntries();
+}
+/* reference ranges: sources checked 24.10.2026 */
+const REFS={
+  t:{unit:"nmol/L", low:9.2, high:31.8, typical:18.4, axis:60,
+     src:"Travison 2017, healthy non-obese men aged 19 to 39, measured with a reference method at the CDC: 2.5th to 97.5th percentile 264 to 916 ng/dL, median 531 ng/dL."},
+  e:{unit:"pmol/L", low:NORM.lo, high:NORM.hi, typLo:NORM.typLo, typHi:NORM.typHi, typMid:NORM.typMid, unc:[NORM.bandLo,NORM.bandHi], axis:200,
+     src:"Normal range 40 to 150 pmol/L, measured by mass spectrometry. The top is agreed: Frederiksen 2020 (772 males) gives 150, commercial LC-MS lab ranges 147, Verdonk 2019 (64 men) 136. The bottom is not: the same studies give 50, 37 and 12, so 40 is the middle of that spread and the grey band shows it. Typical man: 92 pmol/L, middle half 73 to 114 (Framingham, 1148 men, LC-MS/MS; Western Australia mean 95)."} };
+function refBar(r0_,now,nowLabel,typ,unc){   // one horizontal bar: Low, Normal, High, with a typical zone and a marker for you now; the bar stretches to fit you
+  const r=Object.assign({},r0_,{axis:Math.max(r0_.axis,(now||0)*1.15)});
+  const W=300, x=v=>Math.max(0,Math.min(W,v/r.axis*W)), off=now>r.axis;
+  const band=(a,b,fill,op)=>`<rect x="${x(a)}" y="18" width="${Math.max(0,x(b)-x(a))}" height="18" fill="${fill}" opacity="${op}"/>`;
+  const lab=(a,b,t,need)=>x(b)-x(a)>=need?`<text x="${(x(a)+x(b))/2}" y="31" fill="var(--text)" font-size="9" text-anchor="middle">${t}</text>`:"";   // a label only where it fits
+  const tick=(v,l)=>`<line x1="${x(v)}" y1="14" x2="${x(v)}" y2="40" stroke="var(--muted)" stroke-width="1"/><text x="${x(v)}" y="52" fill="var(--muted)" font-size="9" text-anchor="middle">${l}</text>`;
+  return `<svg viewBox="-6 0 ${W+12} 74" width="100%" role="img" aria-label="Reference bar">
+    ${band(0,r.low,"var(--steel)",0.55)}${band(r.low,r.high,"var(--teal)",0.75)}${band(r.high,r.axis,"var(--red)",0.45)}
+    ${unc?`<rect x="${x(unc[0])}" y="18" width="${Math.max(0,x(unc[1])-x(unc[0]))}" height="18" fill="var(--steel)" opacity="0.55"/>`:""}
+    ${typ?`<rect x="${x(typ[0])}" y="18" width="${Math.max(2,x(typ[1])-x(typ[0]))}" height="18" fill="none" stroke="var(--text)" stroke-width="1.2" stroke-dasharray="3 2"/>`:""}
+    ${tick(r.low,r.low)}${x(r.high)-x(r.low)>=22?tick(r.high,r.high):`<line x1="${x(r.high)}" y1="14" x2="${x(r.high)}" y2="40" stroke="var(--muted)" stroke-width="1"/>`}
+    ${lab(0,r.low,"Low",22)}${lab(r.low,r.high,"Normal",36)}${lab(r.high,r.axis,"High",24)}
+    <polygon points="${x(now)-5},6 ${x(now)+5},6 ${x(now)},15" fill="var(--accent)"/>
+    <text x="${Math.min(W-2,Math.max(2,x(now)))}" y="68" fill="var(--accent)" font-size="9.5" text-anchor="${x(now)>W*0.8?'end':x(now)<W*0.2?'start':'middle'}">${nowLabel}${off?" (beyond the bar)":""}</text>
+  </svg>`; }
+function showRefs(){
+  const now=Date.now(), tr=tracks(now), T=Tat(now), E=tr.model.e;
+  $("#morepane").innerHTML=`<div class="card"><h2>Reference ranges</h2>
+    <p class="sub">What the literature describes as low, normal and high in men, in the same units as the app. The arrow is you now, by the objective model.</p>
+    <div class="field-lab" style="margin-top:12px">Total testosterone, ${REFS.t.unit}</div>
+    ${refBar(REFS.t,T,`You: ${r0(T)} ${REFS.t.unit}, ${r1(T/30)}x top of normal`)}
+    <div class="sub">Low under ${REFS.t.low}, normal ${REFS.t.low} to ${REFS.t.high}, high over ${REFS.t.high}. A typical man: ${REFS.t.typical}. The app's "x top of normal" uses your lab's top of 30.</div>
+    <div class="field-lab" style="margin-top:16px">Estradiol, ${REFS.e.unit}</div>
+    ${refBar(REFS.e,E,`You: ${r0(E)} ${REFS.e.unit}`,[REFS.e.typLo,REFS.e.typHi],REFS.e.unc)}
+    <div class="sub">Low under ${REFS.e.low}, normal ${REFS.e.low} to ${REFS.e.high}, high over ${REFS.e.high}. Dashed box: a typical man, ${REFS.e.typLo} to ${REFS.e.typHi}, middle ${REFS.e.typMid}. Grey ${REFS.e.unc[0]} to ${REFS.e.unc[1]}: the studies disagree about where low begins, so treat the lower line as approximate.</div>
+    <div class="notice">Sources. Testosterone: ${REFS.t.src} Estradiol: ${REFS.e.src} Ranges are population statistics, not your personal sweet spot.</div></div>`;
+  scrollPane(); }
+function showEntries(){
+  ensureIds();
+  const esterName={TE:"enanthate",TU:"undecanoate",TP:"propionate"};
+  const byDay={}; const add=(t,pri,txt,id)=>{ const d=t.slice(0,10); (byDay[d]=byDay[d]||[]).push({t,pri,txt,id}); };
+  DATA.inj.forEach(x=>add(x.t,0,`${x.mg} mg ${esterName[x.ester]}`,x.id));
+  DATA.ai.forEach(x=>add(x.t,1,`${x.mg} mg anastrozole`,x.id));
+  DATA.reports.forEach(x=>add(x.t,2,x.ambiguous?`felt "${x.note}" (ambiguous)`:`felt ${LNAME(x.state)}${x.cleared?" (set aside, kept)":""}`,x.id));
+  (DATA.blood||[]).forEach(x=>add(x.t,3,`blood: T ${x.tt} nmol/L${x.shbg?`, SHBG ${x.shbg}`:""}${x.ft?`, free ${x.ft}`:""}`,x.id));
+  (DATA.factors||[]).forEach(x=>{ const p=[]; if(x.weight!=null)p.push(`${x.weight} kg`); if(x.bodyfat!=null)p.push(`${x.bodyfat}% fat`); if(x.shbg!=null)p.push(`SHBG ${x.shbg}`); add(x.t,4,`body: ${p.join(", ")}`,x.id); });
+  const timeOnly=t=>new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  const dayLabel=d=>new Date(d+"T12:00").toLocaleDateString("en-GB",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
+  const days=Object.keys(byDay).sort((a,b)=>b.localeCompare(a));
+  const cards=days.map(d=>{
+    const rows=byDay[d].sort((a,b)=>a.pri-b.pri||ms(a.t)-ms(b.t))
+      .map(i=>`<div class="list-row" style="padding:5px 0"><span>${i.txt}</span><span style="display:flex;align-items:center;gap:10px"><span class="faint mono" style="font-size:11px">${timeOnly(i.t)}</span><button onclick="if(confirm('Delete this entry?'))delEntry('${i.id}')" style="background:none;border:0;color:var(--faint);font-size:16px;line-height:1;cursor:pointer;padding:0 2px">&times;</button></span></div>`).join("");
+    return `<div class="card"><h3 style="margin:0 0 4px">${dayLabel(d)}</h3>${rows}</div>`;
+  }).join("");
+  $("#morepane").innerHTML=`<h2 style="font-family:var(--mono);font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:14px 2px 4px">Everything logged</h2>${cards}`;
+  scrollPane();
+}
+function showWords(){
+  const rows=DATA.reports.map(r=>{
+    const mod = r.seeded ? SNAME(stateOf(E2at(ms(r.t)),cutoffs(anchorModel()))) : (r.predictedState?SNAME(r.predictedState):"-");
+    const his = r.ambiguous ? "ambiguous" : LNAME(r.state);
+    return `<tr class="${r.conflict?'conflict':''}"><td class="mono" style="font-size:12px">${fmtDT(r.t)}</td><td>"${r.note}"</td><td class="mono" style="font-size:12px">${his}</td><td class="mono faint" style="font-size:12px">${mod}</td></tr>`;
+  }).join("");
+  const amb=DATA.reports.filter(r=>r.ambiguous).map(r=>`<div class="list-row"><span>"${r.note}"</span><span class="faint mono" style="font-size:12px">${fmtDT(r.t)}</span></div>`).join("")||`<div class="sub">None.</div>`;
+  $("#morepane").innerHTML=`<div class="card"><h2>Vocabulary index</h2>
+    <p class="sub">Your exact words, the state you chose, and the state the model computed, side by side. The model never labels your words.</p>
+    <table><thead><tr><th>When</th><th>Your words</th><th>You</th><th>Model</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="notice warn">The first ten reports use default times, not times you recorded: 16:00, or the 12.10 dose minus 1 h and plus 6 h. Those times set the anchor, and the anchor sets every state boundary, so the seed reports carry weaker footing than anything you log from now with its own recorded time.</div>
+    <div class="notice warn">Carried conflicts: 13.10 you read Above ceiling, the model puts you in window; 17.10 you read High at a value 2 pmol below your 16.10 Sweet spot, below the model's resolution. Kept, not resolved.</div>
+    <h3>Ambiguous list</h3>${amb}</div>`;
+  scrollPane();
+}
+function showValidation(){
+  const prosp=DATA.reports.filter(r=>!r.seeded && r.state && r.predictedState);
+  let body;
+  if(!prosp.length){ body=`<p class="sub">No prospective entries yet. Every report you log from now records the model's prediction first, then your state, then the gap. Seeded history is retrospective and not scored here.</p>`; }
+  else {
+    const rows=prosp.map(r=>{
+      const d=Math.abs(STATE.findIndex(s=>s.k===r.state)-STATE.findIndex(s=>s.k===r.predictedState));
+      return `<tr><td class="mono" style="font-size:12px">${fmtDT(r.t)}</td><td class="mono" style="font-size:12px">${SNAME(r.predictedState)}</td><td class="mono" style="font-size:12px">${LNAME(r.state)}</td><td class="n">${d===0?"match":d+" off"}</td></tr>`;
+    }).join("");
+    const hits=prosp.filter(r=>r.state===r.predictedState).length;
+    body=`<p class="sub">${hits} of ${prosp.length} exact matches.</p>
+      <table><thead><tr><th>When</th><th>Predicted</th><th>You</th><th>Gap</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  $("#morepane").innerHTML=`<div class="card"><h2>Prospective validation</h2>${body}</div>`;
+  scrollPane();
+}
+function showTerms(){
+  const stTerms=STATE.map(s=>`<p><span class="state" style="font-size:13px">${s.name}</span><br><span class="sub">${s.desc}</span></p>`).join("");
+  $("#morepane").innerHTML=`<div class="card"><h2>Terms</h2>
+    ${stTerms}
+    <div class="divider"></div>
+    <p><span class="state" style="font-size:13px">Rising alert</span><br><span class="sub">The day you reach Above ceiling if you take nothing more.</span></p>
+    <p><span class="state" style="font-size:13px">Falling alert</span><br><span class="sub">The day you reach Crashed on your current dosing. Only testosterone prevents a fall.</span></p>
+    <p><span class="state" style="font-size:13px">Objective</span><br><span class="sub">Calculated from injections and anastrozole only. What a blood test would read. It does not know how you feel. Its Low, Normal or High is against other men, not against your own states.</span></p>
+    <p><span class="state" style="font-size:13px">Your estimate</span><br><span class="sub">The model re-run with two parameters pulled toward your reports. Shown as a percent of your sweet spot, 100% being the sweet spot.</span></p>
+    <p><span class="state" style="font-size:13px">How much is yours</span><br><span class="sub">How much of the estimate comes from you rather than the literature. Starts near zero, rises as you log. Model input weight, not your body weight.</span></p>
+    <div class="divider"></div>
+    <p><span class="state" style="font-size:13px">Anchor</span><br><span class="sub">Your sweet spot, starting from the model's value for 16.10.2026 at 16:00. Every state boundary is a ratio to it, starting at crashed/below 0.799, below/sweet 0.958, sweet/high 1.056, high/over 1.181; your logs stretch or shrink these ranges.</span></p>
+  </div>`;
+  scrollPane();
+}
+function showKey(){
+  $("#morepane").innerHTML=`<div class="card"><h2>Chart key</h2>
+    <p class="sub">Estrogen graph, all in pmol/L (testosterone is nmol/L on its own page).</p>
+    <div class="list-row"><span>Blue line</span><span class="sub">your estimate, feelings folded in</span></div>
+    <div class="list-row"><span>Violet line</span><span class="sub">objective, injections and doses only</span></div>
+    <div class="list-row"><span>Band</span><span class="sub">model uncertainty</span></div>
+    <div class="list-row"><span>Dotted white line</span><span class="sub">anastrozole on board, 0 at bottom</span></div>
+    <div class="list-row"><span>Dashed amber line</span><span class="sub">a dose preview, not logged</span></div>
+    <div class="list-row"><span>Dashed grey lines</span><span class="sub">your state boundaries</span></div>
+    <div class="list-row"><span>White rings</span><span class="sub">your logged feelings, at their time and level</span></div>
+    <div class="list-row"><span>Blue triangles</span><span class="sub">injections</span></div>
+    <div class="list-row"><span>Yellow dots</span><span class="sub">anastrozole doses</span></div>
+    <div class="notice">Before 12.10.2026 anastrozole was not logged, so nothing is drawn there. Forward of the now line assumes no further doses.</div></div>`;
+  scrollPane();
+}
+function showScale(){
+  const hp=hisParams(), c=cutoffs(hp.anchor,hp.ratio);
+  const rows=[["Above ceiling",`above ${r0(c.hiov)}`],["High",`${r0(c.swhi)} to ${r0(c.hiov)}`],["Sweet spot",`${r0(c.besw)} to ${r0(c.swhi)}`],["Low",`${r0(c.crbe)} to ${r0(c.besw)}`],["Crashed",`under ${r0(c.crbe)}`]];
+  $("#morepane").innerHTML=`<div class="card"><h2>Your estrogen scale now</h2>
+    <p class="sub">Each state in pmol/L, at your current anchor ${r0(hp.anchor)}. The lines come from your logs: middles averaged from your recent logs, outer lines moved only by logs on the wrong side. This is today's set, with input weight ${r0(hp.w*100)}%.</p>
+    ${rows.map(r=>`<div class="list-row"><span class="state" style="font-size:13px">${r[0]}</span><span class="mono">${r[1]} pmol/L</span></div>`).join("")}
+    <h3>How the anchor has moved</h3>
+    <div class="mono" style="font-size:16px;color:var(--accent);letter-spacing:.04em;margin:4px 0">${anchorSeries(4).join("  &rarr;  ")}</div>
+    <p class="sub faint">Snapshots every 10 reports, the last point live. The whole ladder above slides with it.</p>
+    <div class="notice">These numbers change over time. A testosterone draw nudges them a little through aromatisation; your sweet-spot and other reports move the anchor they hang from.</div></div>`;
+  scrollPane();
+}
+function showCurve(){
+  const hp=hisParams(), vr=hp.vr, bf=bodyfatAt(Date.now()), scr=screenScale(hp), R=hp.ratio;
+  const row=(l,v)=>`<div class="list-row"><span>${l}</span><span class="mono">${v}</span></div>`;
+  const sc=x=>r0(Math.max(0,Math.min(scr.max,scr.at(x))));
+  $("#morepane").innerHTML=`<div class="card"><h2>What the app learns</h2>
+    <p class="sub">Your scale and two anastrozole values learn from your logs. Everything else is fixed from research and corrected only by blood tests.</p>
+    ${row("Sweet spot middle (100)", `${r0(hp.anchor)} pmol/L, ${r0(hp.w*100)}% from your logs`)}
+    ${row("Crashed", `0 to ${sc(R.crbe)}`)}
+    ${row("Low", `${sc(R.crbe)} to ${sc(R.besw)}`)}
+    ${row("Sweet spot", `${sc(R.besw)} to ${sc(R.swhi)}`)}
+    ${row("High", `${sc(R.swhi)} to ${sc(R.hiov)}`)}
+    ${row("Above ceiling", `${sc(R.hiov)} to ${r0(scr.max)}`)}
+    ${row("Logs in the windows", `sweet ${hp.inWin.sweet}/${WIN.sweet_spot}, low ${hp.inWin.low}/${WIN.below}, high ${hp.inWin.high}/${WIN.high_end}, crashed ${hp.inWin.crashed}, above ${hp.inWin.over}`)}
+    ${row("Anastrozole strength", `Imax ${r1(hp.Imax)}, L50 ${r1(hp.L50)}`)}
+    ${row("Anastrozole clearance", `${r1(hp.aiHL)} h`)}
+    ${row("Strength and clearance from your logs", `${r0(hp.wD*100)}%`)}
+    ${row("Logs set aside", `${vr.droppedUnsure.length} unsure, ${(vr.setAside||[]).length} contradicting, ${vr.pendingUnsure.length} waiting`)}
+    ${row("Body fat now", bf==null?"not logged":`${r1(bf)}%, curve x ${fatFactor(Date.now()).toFixed(3)}`)}
+    <div class="notice">Every state counts 1, super sure ${SUPER_SURE}. Middles: last ${WIN.sweet_spot} sweet spot logs, last ${WIN.below} Low or High. Outer lines start at 80% and 118% and move only when a log lands on the wrong side. Strength and clearance are fully yours after ${DRUG_FULL} logs.</div></div>`;
+  scrollPane();
+}
+function showChecks(){
+  const res=runChecks();
+  const rows=res.map(r=>{
+    const mark=r.pass===true?"pass":r.pass===false?"FAIL":"pending";
+    const col=r.pass===true?"var(--accent)":r.pass===false?"var(--red)":"var(--yellow)";
+    return `<div class="list-row"><span>${r.name}<br><span class="faint" style="font-size:12px">${r.detail}</span></span><span class="mono" style="font-size:11px;letter-spacing:.1em;color:${col}">${mark}</span></div>`;
+  }).join("");
+  const fails=res.filter(r=>r.pass===false).length;
+  $("#morepane").innerHTML=`<div class="card"><h2>Build assertions</h2>
+    <p class="sub">${fails?`${fails} failing.`:"All hard checks pass."} Run on every load. A unit error reaching the screen means a missing check, so these run before anything is trusted.</p>
+    ${rows}</div>`;
+  scrollPane();
+}
+function parseImport(txt){   // checks an export before anything is replaced
+  let d; try{ d=JSON.parse(txt); }catch(e){ return {err:"That is not valid export text."}; }
+  if(!d||typeof d!=="object"||!Array.isArray(d.inj)||!Array.isArray(d.ai)||!Array.isArray(d.reports)) return {err:"That text is not an export from this app."};
+  const bad=[...d.inj,...d.ai,...d.reports].some(x=>!x||typeof x.t!=="string"||isNaN(ms(x.t)));
+  if(bad) return {err:"Some entries have no valid time. Nothing was changed."};
+  return {d:normalize(d)}; }
+function showImport(){
+  $("#morepane").innerHTML=`<div class="card"><h2>Import</h2>
+    <p class="sub">Restores the app from an export. Everything now in the app is replaced, and a copy of it is kept so the import can be undone.</p>
+    <input type="file" id="impfile" accept=".json,.txt,application/json,text/plain" style="margin:8px 0">
+    <textarea id="imptxt" placeholder="or paste the export text here" style="height:140px"></textarea>
+    <button class="act primary sm" id="impgo" style="margin-top:12px">Import</button>
+    ${localStorage.getItem("e2model_before_import")?`<button class="act sm" id="impundo" style="margin-top:12px">Undo last import</button>`:""}</div>`;
+  $("#impfile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(!f)return; const rd=new FileReader(); rd.onload=()=>{ $("#imptxt").value=String(rd.result||""); }; rd.readAsText(f); };
+  $("#impgo").onclick=()=>{ const r=parseImport($("#imptxt").value.trim()); if(r.err){ toast(r.err); return; }
+    const n=r.d.reports.length+r.d.inj.length+r.d.ai.length;
+    if(!confirm(`Replace everything in the app with this export (${r.d.reports.length} feelings, ${r.d.inj.length} injections, ${r.d.ai.length} anastrozole doses)?`)) return;
+    try{ localStorage.setItem("e2model_before_import",JSON.stringify(DATA)); }catch(e){}
+    DATA=r.d; if(DATA.blood.length) recomputeCorrection(); save(); toast(`Imported ${n} entries`); renderData(); };
+  const u=$("#impundo"); if(u) u.onclick=()=>{ const r=parseImport(localStorage.getItem("e2model_before_import")||""); if(r.err){ toast("Nothing to undo"); return; }
+    if(!confirm("Put back the data from before the last import?")) return; DATA=r.d; if(DATA.blood.length) recomputeCorrection(); save(); localStorage.removeItem("e2model_before_import"); toast("Import undone"); renderData(); };
+  scrollPane(); }
+function scrollPane(){ setTimeout(()=>$("#morepane").scrollIntoView({behavior:"smooth",block:"start"}),40); }
+
+function doExport(){
+  const json=JSON.stringify(DATA,null,2);
+  const share=async()=>{
+    try{ if(navigator.share){ await navigator.share({title:"E2 Model data",text:json}); return; } }catch(e){}
+    try{ await navigator.clipboard.writeText(json); toast("Copied to clipboard"); }
+    catch(e){ openInfoRaw("Export","Select and copy:<br><br><textarea style='width:100%;height:200px'>"+json.replace(/</g,"&lt;")+"</textarea>"); }
+  };
+  share();
+}
+
+/* ============================ NAV / UTIL ============================ */
+let curView="estrogen";
+const TITLES={estrogen:"Estrogen",test:"Testosterone",log:"Log",data:"Data"};
+function show(v){
+  curView=v;
+  document.querySelectorAll(".view").forEach(s=>s.classList.remove("on"));
+  $("#v-"+v).classList.add("on");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  $("#htitle").textContent=TITLES[v];
+  if(v==="estrogen")renderEstrogen(); if(v==="test")renderTest(); if(v==="log")renderLog(); if(v==="data")renderData();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>show(b.dataset.v));
+let tT;
+function toast(m){ if(Date.now()-saveFailAt<500) m="Save blocked, export a backup"; const el=$("#toast"); el.textContent=m; el.classList.add("on"); clearTimeout(tT); tT=setTimeout(()=>el.classList.remove("on"),1600); }
+
+$("#hdate").textContent=new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}).toUpperCase();
+setShbgFromBlood();
+if(DATA.blood&&DATA.blood.length) recomputeCorrection();
+if(!DATA.anchorLog||!DATA.anchorLog.length){ snapshotAnchor(true); save(); }
+(function(){ const fails=runChecks().filter(r=>r.pass===false);
+  if(fails.length){ const b=document.createElement("div"); b.className="card alert"; b.style.margin="12px 16px 0";
+    b.innerHTML=`<h2>Build check failed</h2><div class="sub">${fails.map(f=>f.name+": "+f.detail).join("<br>")}</div><div class="sub" style="margin-top:6px">See Data, Checks.</div>`;
+    document.querySelector("main").prepend(b); } })();
+show("estrogen");
+// durability: ask the browser not to evict, and recover from IndexedDB if localStorage was cleared
+(async()=>{
+  try{ if(navigator.storage&&navigator.storage.persist) await navigator.storage.persist(); }catch(e){}
+  idb=await idbOpen();
+  const backup=await idbGet();
+  if(backup&&backup.inj&&!loadedFromStore){                 // localStorage was empty but IndexedDB survived
+    DATA=backup; normalize(DATA); setShbgFromBlood(); bumpRev();
+    if(DATA.blood.length) recomputeCorrection();
+    try{ localStorage.setItem("e2model",JSON.stringify(DATA)); }catch(e){}
+    show(curView);
+  }
+  idbSet(DATA);                                             // mirror current state into IndexedDB
+})();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}</script>
+</body>
+</html>
