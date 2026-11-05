@@ -106,8 +106,9 @@ label.fl{display:block;margin:12px 0 4px}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:12;display:flex;
   padding-bottom:env(safe-area-inset-bottom,0px);
   background:rgba(4,12,16,0.92);backdrop-filter:blur(14px);border-top:1px solid var(--border)}
-nav button{flex:1;background:transparent;border:0;border-top:2px solid transparent;color:var(--faint);
-  font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;padding:12px 2px 14px;cursor:pointer}
+nav button{flex:1;min-width:0;background:transparent;border:0;border-top:2px solid transparent;color:var(--faint);
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;padding:12px 1px 14px;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* five tabs since 5.11.2026: tighter letter-spacing so none of them wraps or clips on a narrow phone */
 nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0 14px rgba(77,184,217,0.55)}
 
 .sheet-bg{position:fixed;inset:0;z-index:20;background:rgba(2,6,8,0.7);display:none;align-items:flex-end}
@@ -155,12 +156,14 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
   <section id="v-estrogen" class="view on"></section>
   <section id="v-test" class="view"></section>
   <section id="v-log" class="view"></section>
+  <section id="v-entries" class="view"></section>
   <section id="v-data" class="view"></section>
 </main>
 <nav>
   <button data-v="estrogen" class="on">Estrogen</button>
   <button data-v="test">Testost.</button>
   <button data-v="log">Log</button>
+  <button data-v="entries">Entries</button>
   <button data-v="data">Data</button>
 </nav>
 <div class="sheet-bg" id="sheetbg"><div class="sheet" id="sheet"></div></div>
@@ -1429,7 +1432,7 @@ function delEntry(id){
   ["inj","ai","reports","blood","factors","archived"].forEach(k=>{ DATA[k]=(DATA[k]||[]).filter(x=>x.id!==id); });
   setShbgFromBlood();
   if(DATA.blood.length) recomputeCorrection(); else { CORR={dTE:0,dTU:0,dTP:0,S:1,provisional:false,nDraws:0,informs:{TE:0,TU:0,TP:0}}; saveCorr(); }
-  save(); showEntries();
+  save(); if(curView==="entries") renderEntries(); else showEntries();
 }
 /* reference ranges: sources checked 24.10.2026 */
 const REFS={
@@ -1534,6 +1537,15 @@ function openLogDetail(id){
     + `<p class="k">"App said then" is what the app predicted before you told it anything, stored at save. "App says now" is the same moment recalculated on today's curve; the two differ once later doses or a blood draw change the curve behind that date.</p>`;
   $("#sheetbg").classList.add("on");
 }
+/* ENTRIES AS ITS OWN TAB, added 5.11.2026 at Jonas's request: he reaches this list constantly, and it sat
+   three taps deep under Data. The Data tab keeps its own Entries and Archived buttons, which still work;
+   both surfaces call the same renderer, so there is one list, shown in two places. */
+function renderEntries(){
+  $("#v-entries").innerHTML=`
+    <div class="notice">Everything on this page is read by the model. Archive moves an entry to Archived (unused), where it is kept but never read, and Restore brings it back to the list it came from.</div>
+    ${entryRows(DATA.reports,false)}
+    <button class="menu-btn" onclick="show('data');showArchived()"><b>Archived (unused)</b><span>kept, never read</span></button>`;
+}
 function showEntries(){
   if(!$("#morepane")) return;   // the pane only exists once the Data tab has rendered; archive/restore may call this before that
   $("#morepane").innerHTML=`<h2 style="font-family:var(--mono);font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:14px 2px 4px">Everything logged</h2>
@@ -1569,7 +1581,7 @@ function archiveEntry(id){
     const x=DATA[k].splice(i,1)[0]; x.from=k;
     DATA.archived=(DATA.archived||[]).concat([x]);
     DATA.archived.sort((a,b)=>ms(a.t)-ms(b.t));
-    afterArchiveChange(); showEntries(); return;
+    afterArchiveChange(); if(curView==="entries") renderEntries(); else showEntries(); return;
   }
   toast("That entry is already archived");
 }
@@ -1579,7 +1591,7 @@ function restoreEntry(id){
   delete x.from;
   DATA[k]=(DATA[k]||[]).concat([x]);
   DATA[k].sort((a,b)=>ms(a.t)-ms(b.t));
-  afterArchiveChange(); showArchived();
+  afterArchiveChange(); showArchived(); if(curView==="entries") renderEntries();
 }
 function findEntry(id){
   for(const k of ["inj","ai","reports","blood","factors","archived"]){
@@ -1805,14 +1817,14 @@ function doExport(){
 
 /* ============================ NAV / UTIL ============================ */
 let curView="estrogen";
-const TITLES={estrogen:"Estrogen",test:"Testosterone",log:"Log",data:"Data"};
+const TITLES={estrogen:"Estrogen",test:"Testosterone",log:"Log",entries:"Entries",data:"Data"};
 function show(v){
   curView=v;
   document.querySelectorAll(".view").forEach(s=>s.classList.remove("on"));
   $("#v-"+v).classList.add("on");
   document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   $("#htitle").textContent=TITLES[v];
-  if(v==="estrogen")renderEstrogen(); if(v==="test")renderTest(); if(v==="log")renderLog(); if(v==="data")renderData();
+  if(v==="estrogen")renderEstrogen(); if(v==="test")renderTest(); if(v==="log")renderLog(); if(v==="entries")renderEntries(); if(v==="data")renderData();
   window.scrollTo(0,0);
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>show(b.dataset.v));
