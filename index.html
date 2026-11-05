@@ -134,10 +134,15 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
 .tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
   border:1px solid var(--border);border-radius:999px;padding:2px 8px;display:inline-block}
 .list-row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
-.menu-btn{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:56px;margin:8px 0;
-  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:0 16px;color:var(--text);
-  font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
-.menu-btn span{color:var(--faint)}
+.menu-btn{display:flex;justify-content:space-between;align-items:center;gap:14px;width:100%;min-height:56px;margin:8px 0;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;color:var(--text);
+  font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;text-align:left}
+/* 5.11.2026: the label and its description used to run into each other on a narrow screen
+   (ENTRIESEVERYTHING THE MODEL READS). The label now keeps its own width and never shrinks,
+   the description takes the rest, wraps instead of overflowing, and a gap holds them apart. */
+.menu-btn>b{flex:0 0 auto;font-weight:400}
+.menu-btn span{color:var(--faint);flex:1 1 auto;min-width:0;text-align:right;
+  letter-spacing:.10em;line-height:1.35;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -289,6 +294,33 @@ function aiLoad(t, elimHL, extra){ // effect on board, in mg of anastrozole equi
   return L;
 }
 function Lat(t, extra){ return aiLoad(t, M.aiHL, extra); }
+function aiLoadBy(t, elimHL, extra){   // the same load, kept separate per drug, because the two drugs do not act on the same thing
+  const ka=LN2/AI_ONSET_HALF, doses=extra?DATA.ai.concat(extra):DATA.ai, out={anastrozole:0, exemestane:0};
+  for(const x of doses){ const h=hours(t,ms(x.t)); if(h<0)continue;
+    const k=aiKind(x), K=AI_KIND[k], hl=K.hl||elimHL, kaK=K.onset?LN2/K.onset:ka, ke=LN2/hl, f=kaK/(kaK-ke);
+    out[k]+=x.mg*K.per*f*(Math.exp(-ke*h)-Math.exp(-kaK*h)); }
+  return out;
+}
+/* THE COMBINED BLOCK, changed 5.11.2026 at Jonas's instruction.
+   Until now both drugs were poured into one load and a single saturating curve was run over the total.
+   That is wrong when both are on board, because they act on different things: exemestane destroys aromatase
+   permanently, anastrozole blocks whatever enzyme is still standing. So the surviving fractions MULTIPLY.
+   If exemestane has taken out 28% and anastrozole blocks 37% of the rest, estradiol production is down
+   1 - 0.72 x 0.63 = 54%, not the 46% the summed version gave. On his real doses of 3 and 5 November the gap
+   was 8 points at the peak of the overlap and closed to nothing by 7 November.
+   It also lifts the ceiling: one drug can never block more than Imax (74%), but two stacked reach 93%.
+   WHAT THIS IS NOT: Jonas's own stronger idea, that anastrozole works harder per mg once there is less
+   enzyme to compete for. That may well be true and would deepen the block further, but it needs a
+   coefficient nobody has measured, so it is not modelled. Multiplying is the conservative form.
+   Single-drug behaviour is IDENTICAL to before, so no stored log and no learned line moves, and the
+   exemestane curve stays valid because it was fitted on one dose with nothing else on board. */
+function aiBlock(t, elimHL, extra, Imax, L50){
+  const by=aiLoadBy(t, elimHL==null?M.aiHL:elimHL, extra);
+  const im=(Imax==null)?M.Imax:Imax, l50=(L50==null)?M.L50:L50;
+  let left=1;
+  for(const k in by){ const L=by[k]; if(L>0) left *= 1 - im*L/(L+l50); }
+  return left;                     // fraction of estradiol production still being made
+}
 function fatFactor(t){ const bf=bodyfatAt(t); return bf==null?1:Math.pow(M.FATPER10,(bf-M.FATREF)/10); }
 function convF(f){ const g=x=>x/(M.KF+x); if(f<=M.FCAP) return g(f);   // study shape where the study measured
   const slope=M.KF/((M.KF+M.FCAP)**2), d=f-M.FCAP; return g(M.FCAP)+slope*M.FB2*d/(M.FB2+d); }   // beyond it: continues, then levels off
@@ -296,10 +328,9 @@ function prodE(T,t){ if(!(T>0)) return 0; const sh=t==null?M.shbg:shbgAt(t), f=T
 function E2at(t, opt){ // opt {extra, Imax, L50, T, aiHL}
   opt=opt||{};
   const T=(opt.T!=null)?opt.T:Tat(t);
-  const L=(opt.aiHL!=null)?aiLoad(t,opt.aiHL,opt.extra):Lat(t,opt.extra);
   const Imax=(opt.Imax!=null)?opt.Imax:M.Imax, L50=(opt.L50!=null)?opt.L50:M.L50;
   const prod=prodE(T,t);
-  const block=1-Imax*L/(L+L50);
+  const block=aiBlock(t, opt.aiHL, opt.extra, Imax, L50);   // each drug blocks separately, the survivors multiply
   return prod*block;
 }
 function freeT(TT,shbg){ // Vermeulen quadratic, % free
@@ -439,7 +470,7 @@ function buildScale(logs,p){
 function engine(logs){   // LOCKED: anastrozole strength and clearance stay at the research values and are no longer learned.
   // The objective curve already matched Jonas 8 times out of 9, better than his logs can resolve, and learning them meant a correct log still nudged the whole curve.
   const Imax=M.Imax, L50=M.L50, aiHL=M.aiHL, tRef=ms(M.refDate);
-  const Lr=aiLoad(tRef,aiHL), startE=prodE(Tat(tRef),tRef)*(1-Imax*Lr/(Lr+L50));
+  const startE=prodE(Tat(tRef),tRef)*aiBlock(tRef, aiHL, null, Imax, L50);
   const sc=buildScale(logs,{Imax,L50,aiHL});
   return Object.assign(sc,{Imax,L50,aiHL,wD:0,N:0,n:logs.length,fit:null,startE}); }
 /* REMOVED 5.11.2026: findConflicts, the contradiction rule.
@@ -489,9 +520,9 @@ function tracks(t){
 function sched(from,stepDays,mg,n){ const out=[]; for(let k=0;k<n;k++)
   out.push({t:new Date(from+k*stepDays*86400000).toISOString().slice(0,16),mg}); return out; }
 function e2ai(w,hl){ // E2 with a custom anastrozole elimination half-life (for the alert/trend band)
-  const L=aiLoad(w,hl); const T=Tat(w); return prodE(T,w)*(1-M.Imax*L/(L+M.L50)); }
+  const T=Tat(w); return prodE(T,w)*aiBlock(w, hl); }
 function e2t(w,hl){ // E2 with a custom testosterone-release band (for falling)
-  const T=Tat(w,hl), L=Lat(w); return prodE(T,w)*(1-M.Imax*L/(L+M.L50)); }
+  const T=Tat(w,hl); return prodE(T,w)*aiBlock(w); }
 function alertNow(t){
   const cut=cutoffs(anchorModel());
   const crossUp=(fn)=>{ for(let h=0;h<=14*24;h+=1){ const w=t+h*3600000; if(fn(w)>cut.hiov) return h/24; } return null; };
@@ -585,6 +616,12 @@ function recomputeCorrection(){ if(typeof bumpRev==="function") bumpRev(); // re
   const draws=(DATA.blood||[]).filter(b=>b.tt>0).sort((a,b)=>ms(a.t)-ms(b.t));
   CORR.nDraws=draws.length;
   if(draws.length===0){ saveCorr(); return; }
+  /* GUARD added 5.11.2026, when archiving was opened up to injections. If every injection covering a draw
+     has been archived or deleted, the model predicts 0 nmol/L at that moment, and the scale step below
+     divides the measured value by zero: CORR.S becomes Infinity and every number in the app turns to NaN.
+     There is nothing to correct against in that state, so the correction is left neutral and flagged
+     provisional until an injection comes back. */
+  if(!draws.some(b=>Tat(ms(b.t))>0.01)){ CORR.provisional=true; saveCorr(); return; }
   if(draws.length===1){                               // provisional: share by local sensitivity, scale takes overflow, closes exactly
     const a=attribute(draws[0]), date=draws[0].t, pred0=Tat(ms(date));
     for(const es of ["TE","TU","TP"]){ if(Math.abs(a.alloc[es])>0.002 && Math.abs(a.cap[es])>0.002 && a.plasma[es]>0.01){
@@ -642,6 +679,17 @@ function runChecks(){
   const hp=hisParams();
   push("16.10 counts once, as the start", !hp.vr.used.some(isStartDay), "start day excluded from the logs");
   push("Ranges ordered, Good contains 100%", hp.ratio.crbe<hp.ratio.besw&&hp.ratio.besw<1&&1<hp.ratio.hiov, [hp.ratio.crbe,hp.ratio.besw,hp.ratio.hiov].map(x=>x.toFixed(3)).join(" / "));
+  (function(){   // 5.11.2026: with two drugs on board the block must be DEEPER than pouring both into one load,
+    // and with only one drug on board it must be IDENTICAL to the old formula. Checked on the real stored doses.
+    const tc=Date.now(), by=aiLoadBy(tc, M.aiHL, null), Ltot=by.anastrozole+by.exemestane;
+    const onBoard=Object.keys(by).filter(k=>by[k]>1e-9);
+    const summed=1-M.Imax*Ltot/(Ltot+M.L50), mult=aiBlock(tc);
+    const okNow = onBoard.length<2 ? Math.abs(mult-summed)<1e-12 : mult < summed-1e-12;
+    push("Two inhibitors multiply, never add", okNow,
+      onBoard.length<2
+        ? (onBoard.length?onBoard[0]+" only, so identical to the single-drug formula":"nothing on board")
+        : "both on board: "+(100*(1-mult)).toFixed(1)+"% blocked, the old summed rule gave "+(100*(1-summed)).toFixed(1)+"%");
+  })();
   push("Anastrozole strength and clearance locked at the research values", hp.Imax===M.Imax&&hp.L50===M.L50&&hp.aiHL===M.aiHL, `Imax ${hp.Imax}, L50 ${hp.L50}, clearance ${hp.aiHL} h`);
   push("Conversion curve on free testosterone", Math.abs(prodE(30,null)/fatFactor(null)-112)<1.5 && prodE(60,null)/prodE(30,null)>1.35 && prodE(60,null)/prodE(30,null)<1.5, `112 pmol/L at total 30; doubling to 60 gives +${r0((prodE(60,null)/prodE(30,null)-1)*100)}%`);
   return out;
@@ -927,10 +975,10 @@ function renderEstrogen(){
     trendCard=`<div class="card"><div class="row"><h2>Trend</h2>${iBtn('trend')}</div>
       <div class="state">${cap}</div>
       <div class="sub mono" style="margin-top:8px;font-size:13px;color:var(--yellow)">${ceilTxt}</div></div>`; }
-  const pctTxt = tr.his.state==="crashed" ? `Crashed is under ${r0(tr.his.band[1])} pmol` : tr.his.band[1]!=null ? `${SNAME(tr.his.state)} is ${r0(tr.his.band[0])} to ${r0(tr.his.band[1])} pmol` : `${SNAME(tr.his.state)} is over ${r0(tr.his.band[0])} pmol`;
+  const pctTxt = tr.his.state==="crashed" ? `Crashed: under ${r0(tr.his.band[1])} pmol` : tr.his.band[1]!=null ? `${SNAME(tr.his.state)}: ${r0(tr.his.band[0])} to ${r0(tr.his.band[1])} pmol` : `${SNAME(tr.his.state)}: over ${r0(tr.his.band[0])} pmol`;
   // E2 chart
   const eFast={TE:3.4,TU:29,TP:19/24}, eSlow={TE:4.2,TU:34,TP:25/24}, COBJ="#5B4FA8";
-  const E2full=(tt,eHL,aiHL,im,l50)=>{ const T=Tat(tt,eHL), L=aiLoad(tt,aiHL); return prodE(T,tt)*(1-im*L/(L+l50)); };
+  const E2full=(tt,eHL,aiHL,im,l50)=>{ const T=Tat(tt,eHL); return prodE(T,tt)*aiBlock(tt, aiHL, null, im, l50); };
   const hisC=tt=>E2full(tt,null,hp.aiHL,hp.Imax,hp.L50), modC=tt=>E2at(tt);
   const bLo=(im,l50,hl)=>tt=>Math.min(E2full(tt,eFast,hl*0.9,im,l50),E2full(tt,eFast,hl*1.1,im,l50),E2full(tt,eSlow,hl*0.9,im,l50),E2full(tt,eSlow,hl*1.1,im,l50));
   const bHi=(im,l50,hl)=>tt=>Math.max(E2full(tt,eFast,hl*0.9,im,l50),E2full(tt,eFast,hl*1.1,im,l50),E2full(tt,eSlow,hl*0.9,im,l50),E2full(tt,eSlow,hl*1.1,im,l50));
@@ -955,7 +1003,7 @@ function renderEstrogen(){
   const dnow=new Date(); dnow.setMinutes(dnow.getMinutes()-dnow.getTimezoneOffset()); const nowISO=dnow.toISOString().slice(0,16);
   let previewFn=null, previewRead="";
   if(previewDose>0){
-    previewFn = tt=>{ const T=Tat(tt), L=aiLoad(tt,hp.aiHL,[{t:nowISO,mg:previewDose,kind:previewKind}]); return prodE(T,tt)*(1-hp.Imax*L/(L+hp.L50)); };
+    previewFn = tt=>{ const T=Tat(tt); return prodE(T,tt)*aiBlock(tt, hp.aiHL, [{t:nowISO,mg:previewDose,kind:previewKind}], hp.Imax, hp.L50); };
     const span=previewKind==="exemestane"?10*24:5*24;
     // Report where the dose bites hardest, which is where it pulls you furthest BELOW the no-dose line.
     // Reporting the plain low point was misleading while estradiol is climbing: every dose showed the same number, today's level.
@@ -990,7 +1038,7 @@ function renderEstrogen(){
       <div class="card"><div class="row"><h2>Objective</h2>${iBtn('model')}</div>
         <div class="big">${r0(tr.model.e)}<span class="unit"> pmol/L</span></div>
         <div class="state" style="margin-top:8px">${normName(tr.model.e)}</div>
-        <div class="sub mono" style="margin-top:6px">Men on testosterone: ${NORM.lo} to ${NORM.hi} pmol/L</div></div>
+        <div class="sub mono" style="margin-top:6px">Normal range: ${NORM.lo} to ${NORM.hi} pmol/L</div></div>
       <div class="card"><div class="row"><h2>Your estimate</h2>${iBtn('his')}</div>
         <div class="big">${r0(tr.his.e)}<span class="unit"> pmol/L</span></div>
         <div class="state" style="margin-top:8px">${SNAME(tr.his.state)}</div>
@@ -1361,19 +1409,19 @@ function renderData(){
     <div class="list-row"><span>Propionate half-life</span><span class="mono">${r0(H.TP*24)} h</span></div>
     <div class="list-row"><span>Scale (clearance x bioavailability)</span><span class="mono">x${CORR.S.toFixed(2)}</span></div></div>` : "";
   $("#v-data").innerHTML=`${corrCard}
-    <button class="menu-btn" onclick="showWords()">Words <span>vocabulary index</span></button>
-    <button class="menu-btn" onclick="showValidation()">Validation <span>predicted vs reported</span></button>
-    <button class="menu-btn" onclick="showChecks()">Checks <span>build assertions</span></button>
-    <button class="menu-btn" onclick="showBodyFat()">Body fat <span>${bodyfatAt(Date.now())==null?"not set":r1(bodyfatAt(Date.now()))+"%, curve x "+fatFactor(Date.now()).toFixed(3)}</span></button>
-    <button class="menu-btn" onclick="showScale()">Scale <span>your state boundaries now</span></button>
-    <button class="menu-btn" onclick="showCurve()">Learning <span>what is learned from your logs</span></button>
-    <button class="menu-btn" onclick="showKey()">Key <span>what the chart marks mean</span></button>
-    <button class="menu-btn" onclick="showEntries()">Entries <span>everything the model reads</span></button>
-    <button class="menu-btn" onclick="showArchived()">Archived (unused) <span>kept, never read</span></button>
-    <button class="menu-btn" onclick="showRefs()">Reference ranges <span>normal male estrogen and testosterone</span></button>
-    <button class="menu-btn" onclick="showTerms()">Terms <span>every term defined</span></button>
-    <button class="menu-btn" onclick="doExport()">Export <span>copy / share</span></button>
-    <button class="menu-btn" onclick="showImport()">Import <span>restore from an export</span></button>
+    <button class="menu-btn" onclick="showWords()"><b>Words</b><span>vocabulary index</span></button>
+    <button class="menu-btn" onclick="showValidation()"><b>Validation</b><span>predicted vs reported</span></button>
+    <button class="menu-btn" onclick="showChecks()"><b>Checks</b><span>build assertions</span></button>
+    <button class="menu-btn" onclick="showBodyFat()"><b>Body fat</b><span>${bodyfatAt(Date.now())==null?"not set":r1(bodyfatAt(Date.now()))+"%, curve x "+fatFactor(Date.now()).toFixed(3)}</span></button>
+    <button class="menu-btn" onclick="showScale()"><b>Scale</b><span>your state boundaries now</span></button>
+    <button class="menu-btn" onclick="showCurve()"><b>Learning</b><span>what is learned from your logs</span></button>
+    <button class="menu-btn" onclick="showKey()"><b>Key</b><span>what the chart marks mean</span></button>
+    <button class="menu-btn" onclick="showEntries()"><b>Entries</b><span>everything the model reads</span></button>
+    <button class="menu-btn" onclick="showArchived()"><b>Archived (unused)</b><span>kept, never read</span></button>
+    <button class="menu-btn" onclick="showRefs()"><b>Reference ranges</b><span>normal male estrogen and testosterone</span></button>
+    <button class="menu-btn" onclick="showTerms()"><b>Terms</b><span>every term defined</span></button>
+    <button class="menu-btn" onclick="doExport()"><b>Export</b><span>copy / share</span></button>
+    <button class="menu-btn" onclick="showImport()"><b>Import</b><span>restore from an export</span></button>
     <div id="morepane"></div>`;
 }
 function dismissReview(i){ if(DATA.blood&&DATA.blood[i]){ DATA.blood[i].reviewDismissed=true; save(); renderTest(); } }
@@ -1416,17 +1464,39 @@ function showRefs(){
     <div class="sub">Low under ${REFS.e.low}, in range ${REFS.e.low} to ${REFS.e.high}, high over ${REFS.e.high}, for men on testosterone. Dashed box: the middle of that range, ${REFS.e.typLo} to ${REFS.e.typHi}.</div>
     <div class="notice">Sources. Testosterone: ${REFS.t.src} Estradiol: ${REFS.e.src} Ranges are population statistics, not your personal sweet spot.</div></div>`;
   scrollPane(); }
+/* ENTRY ROWS. Every entry is described by its OWN kind, whichever list it sits in, so the Archived view
+   shows an archived injection as an injection rather than as a malformed feeling log (fixed 5.11.2026,
+   when archiving was opened up to injections, doses, blood draws and body entries). */
+const ESTER_NAME={TE:"enanthate",TU:"undecanoate",TP:"propionate"};
+function entryKind(x){   // which list an entry belongs to; archived entries carry it on themselves
+  if(x.from) return x.from;
+  if(x.ester) return "inj";
+  if(x.tt!=null) return "blood";
+  if(x.state!==undefined || x.ambiguous) return "reports";
+  if(x.weight!=null||x.bodyfat!=null||(x.shbg!=null&&x.tt==null)) return "factors";
+  return "ai";
+}
+function entryText(x,kind){
+  if(kind==="inj")   return `${x.mg} mg ${ESTER_NAME[x.ester]}`;
+  if(kind==="ai")    return `${x.mg} mg ${AI_KIND[aiKind(x)].label.toLowerCase()}`;
+  if(kind==="blood") return `blood: T ${x.tt} nmol/L${x.shbg?`, SHBG ${x.shbg}`:""}${x.ft?`, free ${x.ft}`:""}`;
+  if(kind==="factors"){ const p=[]; if(x.weight!=null)p.push(`${x.weight} kg`); if(x.bodyfat!=null)p.push(`${x.bodyfat}% fat`); if(x.shbg!=null)p.push(`SHBG ${x.shbg}`); return `body: ${p.join(", ")}`; }
+  return x.ambiguous?`felt "${x.note}" (ambiguous)`:`felt ${LNAME(x.state)} at ${r0(eAt(x,hisParams()))} pmol`;
+}
+const ENTRY_PRI={inj:0, ai:1, reports:2, blood:3, factors:4};
 function entryRows(src,archived){
   ensureIds();
-  const esterName={TE:"enanthate",TU:"undecanoate",TP:"propionate"};
+  const esterName=ESTER_NAME;
   const byDay={}; const add=(t,pri,txt,id,feel)=>{ const d=t.slice(0,10); (byDay[d]=byDay[d]||[]).push({t,pri,txt,id,feel}); };
   if(!archived){
-    DATA.inj.forEach(x=>add(x.t,0,`${x.mg} mg ${esterName[x.ester]}`,x.id));
-    DATA.ai.forEach(x=>add(x.t,1,`${x.mg} mg ${AI_KIND[aiKind(x)].label.toLowerCase()}`,x.id));
-    (DATA.blood||[]).forEach(x=>add(x.t,3,`blood: T ${x.tt} nmol/L${x.shbg?`, SHBG ${x.shbg}`:""}${x.ft?`, free ${x.ft}`:""}`,x.id));
-    (DATA.factors||[]).forEach(x=>{ const p=[]; if(x.weight!=null)p.push(`${x.weight} kg`); if(x.bodyfat!=null)p.push(`${x.bodyfat}% fat`); if(x.shbg!=null)p.push(`SHBG ${x.shbg}`); add(x.t,4,`body: ${p.join(", ")}`,x.id); });
+    DATA.inj.forEach(x=>add(x.t,0,entryText(x,"inj"),x.id));
+    DATA.ai.forEach(x=>add(x.t,1,entryText(x,"ai"),x.id));
+    (DATA.blood||[]).forEach(x=>add(x.t,3,entryText(x,"blood"),x.id));
+    (DATA.factors||[]).forEach(x=>add(x.t,4,entryText(x,"factors"),x.id));
+    src.forEach(x=>add(x.t,2,entryText(x,"reports"),x.id,true));
+  } else {
+    src.forEach(x=>{ const k=entryKind(x); add(x.t,ENTRY_PRI[k],entryText(x,k),x.id,k==="reports"); });
   }
-  src.forEach(x=>add(x.t,2,x.ambiguous?`felt "${x.note}" (ambiguous)`:`felt ${LNAME(x.state)} at ${r0(eAt(x,hisParams()))} pmol`,x.id,true));   // the level the model puts you at that moment, same unit as everywhere else
   const timeOnly=t=>new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
   const dayLabel=d=>new Date(d+"T12:00").toLocaleDateString("en-GB",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
   const days=Object.keys(byDay).sort((a,b)=>b.localeCompare(a));
@@ -1465,27 +1535,51 @@ function openLogDetail(id){
   $("#sheetbg").classList.add("on");
 }
 function showEntries(){
+  if(!$("#morepane")) return;   // the pane only exists once the Data tab has rendered; archive/restore may call this before that
   $("#morepane").innerHTML=`<h2 style="font-family:var(--mono);font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:14px 2px 4px">Everything logged</h2>
     <div class="notice">Everything on this page is read by the model. Archive moves an entry to Archived (unused), where it is kept but never read.</div>
     ${entryRows(DATA.reports,false)}`;
   scrollPane();
 }
 function showArchived(){
+  if(!$("#morepane")) return;   // the pane only exists once the Data tab has rendered; archive/restore may call this before that
   $("#morepane").innerHTML=`<h2 style="font-family:var(--mono);font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:14px 2px 4px">Archived (unused)</h2>
-    <div class="notice">Kept, exported, and never read by the model. Nothing here moves a line or appears on the chart. Restore puts an entry back into Entries, where it counts again.</div>
+    <div class="notice">Kept, exported, and never read by the model. Nothing here moves a line or appears on the chart. Restore puts an entry back into the list it came from, where it counts again. An archived injection or dose is left out of the curve entirely, so the estradiol numbers change while it sits here.</div>
     ${entryRows(DATA.archived||[],true)}`;
   scrollPane();
 }
+/* ARCHIVE AND RESTORE, opened up to every entry type 5.11.2026 at Jonas's request.
+   Archived entries are MOVED to DATA.archived, a list no model code ever reads, and the list they came
+   from is written onto the entry as `from`, so Restore puts it back where it belongs rather than turning
+   an injection into a feeling log. Entries archived before this change have no `from`; entryKind() infers
+   it, and all of those are feeling logs anyway.
+   Archiving an injection or a dose REMOVES it from the curve, which moves every estradiol number and can
+   move the state lines with them. That is the point of the button: take an entry out without deleting it.
+   Blood draws rebuild the testosterone correction on the way out and on the way back in. */
+function afterArchiveChange(){
+  setShbgFromBlood();
+  if((DATA.blood||[]).length) recomputeCorrection();
+  else { CORR={dTE:0,dTU:0,dTP:0,S:1,provisional:false,nDraws:0,informs:{TE:0,TU:0,TP:0}}; saveCorr(); }
+  save();
+}
 function archiveEntry(id){
-  const i=DATA.reports.findIndex(x=>x.id===id);
-  if(i<0){ toast("Only feeling logs can be archived"); return; }
-  DATA.archived=(DATA.archived||[]).concat(DATA.reports.splice(i,1));
-  DATA.archived.sort((a,b)=>ms(a.t)-ms(b.t)); save(); showEntries();
+  for(const k of ["inj","ai","reports","blood","factors"]){
+    const i=(DATA[k]||[]).findIndex(x=>x.id===id);
+    if(i<0) continue;
+    const x=DATA[k].splice(i,1)[0]; x.from=k;
+    DATA.archived=(DATA.archived||[]).concat([x]);
+    DATA.archived.sort((a,b)=>ms(a.t)-ms(b.t));
+    afterArchiveChange(); showEntries(); return;
+  }
+  toast("That entry is already archived");
 }
 function restoreEntry(id){
   const i=(DATA.archived||[]).findIndex(x=>x.id===id); if(i<0) return;
-  DATA.reports=DATA.reports.concat(DATA.archived.splice(i,1));
-  DATA.reports.sort((a,b)=>ms(a.t)-ms(b.t)); save(); showArchived();
+  const x=DATA.archived.splice(i,1)[0], k=entryKind(x);
+  delete x.from;
+  DATA[k]=(DATA[k]||[]).concat([x]);
+  DATA[k].sort((a,b)=>ms(a.t)-ms(b.t));
+  afterArchiveChange(); showArchived();
 }
 function findEntry(id){
   for(const k of ["inj","ai","reports","blood","factors","archived"]){
