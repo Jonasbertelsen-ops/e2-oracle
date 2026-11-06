@@ -355,6 +355,14 @@ function bandOf(k,cut){
   return [lo,hi];
 }
 const anchorModel=()=>E2at(ms(M.refDate));
+/* THE LINES EVERY READING IS JUDGED AGAINST, fixed 5.11.2026.
+   Until now four places read the model's value on 16 October 2026 times the RETIRED 16 October ratios in
+   M.ratio. Those ratios were replaced by the 77 / 105 / 132 starting lines on 4 November and are no longer
+   what the app shows anywhere. The consequence was not cosmetic: the predicted state stored with every
+   feeling log came from them, so the Validation hit rate scored the app against lines it had stopped using,
+   and the trend card measured its slow/moderate/fast wording and its next-boundary estimate against them too.
+   liveCut() is the one source now: the current lines, learned from his logs. */
+function liveCut(){ const hp=hisParams(); return cutoffs(hp.anchor,hp.ratio); }
 
 /* ----- learning engine ----- */
 const UNSURE_TOL=0.03;       // an unsure log is kept if it sits within 3% of where the sure logs put you
@@ -509,7 +517,7 @@ function hisParamsRaw(){ const vr=validatedReports(); const used=vr.used, res=en
   vr.setAside=[];   // kept as an empty list so older display code reads 0; the contradiction rule it came from was removed 5.11.2026
   return Object.assign(res,{vr}); }
 function tracks(t){
-  const amod=anchorModel(), cutM=cutoffs(amod);
+  const amod=anchorModel(), cutM=liveCut();   // the objective pmol number still comes from the model; the STATE it is called comes from his current lines
   const em=E2at(t), sm=stateOf(em,cutM);
   const hp=hisParams(), cutH=cutoffs(hp.anchor,hp.ratio);
   const eh=E2at(t,{Imax:hp.Imax,L50:hp.L50,aiHL:hp.aiHL}), sh=stateOf(eh,cutH), band=bandOf(sh,cutH);
@@ -527,7 +535,7 @@ function e2ai(w,hl){ // E2 with a custom anastrozole elimination half-life (for 
 function e2t(w,hl){ // E2 with a custom testosterone-release band (for falling)
   const T=Tat(w,hl); return prodE(T,w)*aiBlock(w); }
 function alertNow(t){
-  const cut=cutoffs(anchorModel());
+  const cut=liveCut();
   const crossUp=(fn)=>{ for(let h=0;h<=14*24;h+=1){ const w=t+h*3600000; if(fn(w)>cut.hiov) return h/24; } return null; };
   const crossDn=(fn)=>{ for(let h=0;h<=14*24;h+=1){ const w=t+h*3600000; if(fn(w)<cut.crbe) return h/24; } return null; };
   const upMid=crossUp(w=>e2ai(w,M.aiHL));
@@ -879,7 +887,7 @@ function pieChart(t){ // current share of each ester in the total
   s+=`</svg>`; return s;
 }
 function trendNow(t){ // momentum (bands/day) + time to next boundary, on current dosing, no new testosterone
-  const cut=cutoffs(anchorModel()), e0=E2at(t), slope=E2at(t+24*3600000)-e0;
+  const cut=liveCut(), e0=E2at(t), slope=E2at(t+24*3600000)-e0;
   const band=(cut.hiov-cut.besw)/2;             // half the width of Good, the old sweet-spot width, so the slow/moderate/fast wording keeps its old meaning
   const bpd=Math.abs(slope)/band;               // bands per day
   if(bpd<0.15) return {dir:"steady"};
@@ -1393,9 +1401,36 @@ function svgChart(cfg){
     s+=`<circle cx="${x}" cy="${y}" r="4.6" fill="rgba(6,24,31,0.9)" stroke="${p.color||'#EAF4F8'}" stroke-width="1.8"/>`; }
   if(!cfg.hideY) for(const v of [cfg.yMin,(cfg.yMin+cfg.yMax)/2,cfg.yMax]){ const y=Y(v).toFixed(1);
     s+=`<text x="${padL-5}" y="${(+y+5).toFixed(1)}" fill="#9FBAC6" font-family="${MONO}" font-size="15" text-anchor="end">${Math.round(v)}</text>`; }
-  const tk=short?8:5;   // Day view: a mark every 3 h instead of every 6, so you can read a time off the chart
-  for(let i=0;i<=tk;i++){ const t=tMin+(tMax-tMin)*i/tk, x=X(t);
-    const lab=short?new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):new Date(t).toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit"});
+  /* THE TIME AXIS, rebuilt 5.11.2026.
+     It used to cut the span into five equal pieces, so on the 8-day view the labels landed 1 day 14 h apart
+     and whole dates were never written: 01, 02, 04, 06, 07, 09. Jonas: "I can see every other."
+     Now each DAY gets its own band, running NOON TO NOON as he specified, shaded in alternating faint tone,
+     with its date centred underneath. A dose mark then sits visibly inside the day it belongs to. */
+  if(!short){
+    const DAY=86400000;
+    let d0=new Date(tMin); d0.setHours(12,0,0,0); if(d0.getTime()>tMin) d0=new Date(d0.getTime()-DAY);
+    const dayW=(W-padL-padR)*DAY/(tMax-tMin);                 // how wide one day is in this view
+    const step=Math.max(1,Math.ceil(34/dayW));                // a date needs about 34 px; on Month that means every 2nd or 3rd day
+    let band=0;
+    for(let t0=d0.getTime(); t0<tMax; t0+=DAY, band++){
+      const t1=Math.min(t0+DAY,tMax), xa=Math.max(X(t0),padL), xb=Math.min(X(t1),W-padR);
+      if(xb<=xa) continue;
+      if(band%2===0) s+=`<rect x="${xa.toFixed(1)}" y="${padT}" width="${(xb-xa).toFixed(1)}" height="${(H-padB-padT).toFixed(1)}" fill="rgba(145,180,200,0.045)"/>`;
+      if(X(t0)>padL) s+=`<line x1="${X(t0).toFixed(1)}" y1="${padT}" x2="${X(t0).toFixed(1)}" y2="${(H-padB+5).toFixed(1)}" stroke="rgba(95,122,134,0.45)" stroke-width="1"/>`;
+      /* MIDNIGHT RIDGE, 5.11.2026 at Jonas's request. The band edges are midday; this short tick marks the
+         halfway point, which is midnight, so he can tell daytime from night inside a band at a glance. */
+      const mid24=t0+DAY/2;
+      if(mid24>tMin&&mid24<tMax){ const xm=X(mid24).toFixed(1);   // sits BELOW the axis line, clear of the dose marks that sit just above it
+        s+=`<line x1="${xm}" y1="${(H-padB+1).toFixed(1)}" x2="${xm}" y2="${(H-padB+8).toFixed(1)}" stroke="rgba(159,186,198,0.85)" stroke-width="1.6"/>`; }
+      if(band%step===0 && xb-xa>14){   // the date goes under the middle of its own band
+        const mid=(xa+xb)/2, lab=new Date(t0+DAY/2).toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit"});
+        s+=`<text x="${mid.toFixed(1)}" y="${H-padB+20}" fill="#9FBAC6" font-family="${MONO}" font-size="${dayW<30?10:12}" text-anchor="middle">${lab}</text>`; }
+    }
+  }
+  const tk=short?8:5;   // Day view only: a mark every 3 h, so you can read a time off the chart
+  for(let i=0;i<=tk;i++){ if(!short) break;
+    const t=tMin+(tMax-tMin)*i/tk, x=X(t);
+    const lab=new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
     const anc=i===0?"start":i===tk?"end":"middle";
     s+=`<line x1="${x.toFixed(1)}" y1="${H-padB}" x2="${x.toFixed(1)}" y2="${(H-padB+5).toFixed(1)}" stroke="#5F7A86" stroke-width="1"/>`;
     s+=`<text x="${x.toFixed(1)}" y="${H-padB+20}" fill="#9FBAC6" font-family="${MONO}" font-size="${tk>6?12:15}" text-anchor="${anc}">${lab}</text>`; }
@@ -1639,7 +1674,7 @@ function editEntry(id){
 }
 function showWords(){
   const rows=DATA.reports.map(r=>{
-    const mod = r.seeded ? SNAME(stateOf(E2at(ms(r.t)),cutoffs(anchorModel()))) : (r.predictedState?SNAME(r.predictedState):"-");
+    const mod = r.seeded ? SNAME(stateOf(E2at(ms(r.t)),liveCut())) : (r.predictedState?SNAME(r.predictedState):"-");
     const his = r.ambiguous ? "ambiguous" : LNAME(r.state);
     return `<tr class="${r.conflict?'conflict':''}"><td class="mono" style="font-size:12px">${fmtDT(r.t)}</td><td>"${r.note}"</td><td class="mono" style="font-size:12px">${his}</td><td class="mono faint" style="font-size:12px">${mod}</td></tr>`;
   }).join("");
