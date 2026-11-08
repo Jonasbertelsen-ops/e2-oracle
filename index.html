@@ -173,7 +173,7 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
 <script>
 "use strict";
 const LN2=Math.LN2;
-const APP_VERSION="v39";
+const APP_VERSION="v39";   // bumped with every release; stored on every log so a reader knows which build produced it
 /* 8.11.2026 LOG COLOURS. Used wherever a log is drawn on a TESTOSTERONE axis, where height is already
    taken by testosterone so the colour has to carry the state.
    Every one is an existing app colour, chosen by Jonas so the chart keeps the app's design: --red for
@@ -193,7 +193,7 @@ const INFO_LOGDOTS=()=>({t:"Your logs on this chart",body:
   `<p>Each dot is a feeling log, placed on the testosterone line at the moment you made it. The height is your testosterone then, so the colour carries what you felt.</p>`+
   LOG_STATES.map(st=>`<p style="margin:6px 0"><span style="display:inline-block;width:14px;height:14px;border-radius:999px;background:${LOG_COLOR[st.k]};vertical-align:-2px;margin-right:10px"></span><span class="state" style="font-size:13px">${LOG_NAME[st.k]}</span><br><span class="sub" style="margin-left:24px">${st.desc}</span></p>`).join("")+
   `<p class="k">The first and the last share a colour: there is no sixth colour that stays readable on a phone. They are told apart by where they sit, one at the bottom of the curve and one at the top.</p>
-   <p class="k">This is the pairing the logging exists to build: whether the upper states cluster at the higher testosterone levels. On the estradiol chart the same logs are read the other way round, height for the state and colour only to mark an above-range log.</p>`});   // 8.11.2026: a FUNCTION, not a const object. It reads LOG_STATES, which is declared further down the file, so evaluating it at load threw and killed the whole script.   // bumped with every release; stored on every log so a reader knows which build produced it
+   <p class="k">This is the pairing the logging exists to build: whether the upper states cluster at the higher testosterone levels. On the estradiol chart the same logs are read the other way round, height for the state and colour only to mark an above-range log.</p>`});   // 8.11.2026: a FUNCTION, not a const object. It reads LOG_STATES, which is declared further down the file, so evaluating it at load would throw.
 /* 8.11.2026 CALIBRATED RANGE. Derived from his own steady-state logs, not from literature.
    CAL_X: the point above which the estimate is NOT treated as calibrated, and above which a feeling log
    is routed to DATA.aboveRange instead of DATA.reports. His clean steady Good logs sit at 2.3 to 4.1x
@@ -203,7 +203,7 @@ const INFO_LOGDOTS=()=>({t:"Your logs on this chart",body:
    CAL_GAP: at 3.5x to 5.2x his felt states ran about 25 pmol ABOVE the app's number, individual gaps
    15 to 35, from five moments. Below 3x no gap was measurable, which is not the same as none. One moment at 5.2x
    needs no gap and is unexplained. Never added to any displayed number; it is text only. */
-const CAL_X=3, CAL_GAP=25;   // bumped with every release; stored on every log so a reader knows which build produced it
+const CAL_X=3, CAL_GAP=25;
 
 /* ============================ MODEL (literature, fixed) ============================ */
 const M={
@@ -1038,7 +1038,10 @@ let lookT=null;        // 8.11.2026: the moment being read in "Read a moment", i
 let pendingLogT=null;  // 8.11.2026: a timestamp the Log tab should prefill instead of now   // 8.11.2026: where NOW sits inside the 14 days and Month windows
 function placeToggle(fn){ if(!VIEWS[trendsView].placeable) return "";
   return `<div style="display:flex;gap:6px;margin:4px 0 2px;flex-wrap:wrap">`+
-  [["ahead","Ahead of now"],["centre","Now centred"],["back","Looking back"]].map(([k,l])=>pill(k===winPlace,l,`winPlace='${k}';${fn}()`)).join("")+`</div>`; }
+  [["back","Past"],["centre","Now"],["ahead","Future"]].map(([k,l])=>pill(k===winPlace,l,`winPlace='${k}';${fn}()`)).join("")+`</div>`; }
+/* 8.11.2026: the three buttons read left to right in time order, Past then Now then Future, so the button
+   sits on the same side of the row as the stretch of time it shows. The internal keys are unchanged:
+   "back" shows the span behind the NOW line, "ahead" shows it in front. */
 let e2mode="yours", previewDose=0, previewKind="anastrozole", chartShow="e2";
 function chartShowToggle(){ return `<div style="display:flex;gap:6px;margin:10px 0 2px;flex-wrap:wrap">`+
   [["e2","Estradiol"],["t","Testosterone"],["et","Estradiol + testosterone"]].map(([k,l])=>pill(k===chartShow,l,`chartShow='${k}';renderEstrogen()`)).join("")+`</div>`; }
@@ -1214,7 +1217,7 @@ function renderEstrogen(){
       </div>
       <div class="state" style="margin-top:10px">${SNAME(lst)}</div>
       ${lx>CAL_X?`<div class="notice warn" style="margin-top:8px">Outside the calibrated range. Reads low by about ${CAL_GAP} pmol here.</div>`:""}
-      ${(lookT<t-v.back*3600000||lookT>t+v.fwd*3600000)?`<div class="notice" style="margin-top:8px">That moment is outside the chart above, so no marker is drawn for it. Widen the time span, or set the window to Looking back.</div>`:""}
+      ${(lookT<t-v.back*3600000||lookT>t+v.fwd*3600000)?`<div class="notice" style="margin-top:8px">That moment is outside the chart above, so no marker is drawn for it. Widen the time span, or set the window to Past.</div>`:""}
       <button class="act sm" style="margin-top:10px" id="logAtMoment">Log a state at this time</button>`;
   }
   INFO.logdots=INFO_LOGDOTS();
@@ -1528,8 +1531,8 @@ function recentList(){
   return items.slice(0,12).map(i=>`<div class="list-row"><span>${i.txt}</span><span class="faint mono" style="font-size:12px">${fmtDT(i.t)}</span></div>`).join("");
 }
 
-let trendsView="week";
-const VIEWS={day:{back:12,fwd:12,label:"Day",marks:true},week:{back:12,fwd:168,label:"Week",marks:true},tenday:{back:96,fwd:96,label:"8 days"},fortnight:{span:336,label:"14 days",placeable:true},month:{span:768,label:"Month",placeable:true}};
+let trendsView="tenday";   // 8.11.2026: Week removed; 8 days is the default
+const VIEWS={day:{back:12,fwd:12,label:"Day",marks:true},tenday:{back:96,fwd:96,label:"8 days",marks:true},fortnight:{span:336,label:"14 days",placeable:true},month:{span:768,label:"Month",placeable:true}};   // 8.11.2026: Week removed, redundant beside 8 days. 8 days keeps crossing labels, which Week carried.
 /* 8.11.2026: the two long views carry a span instead of a fixed back/fwd, and winPlace decides where NOW sits inside it.
    "ahead" keeps a small slice of the past so the curve is already arriving at the NOW line instead of starting on it. */
 function winView(){ const v=VIEWS[trendsView]; if(!v.placeable) return v; const s=v.span, edge=Math.round(s*0.08);
