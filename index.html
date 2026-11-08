@@ -173,6 +173,37 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
 <script>
 "use strict";
 const LN2=Math.LN2;
+const APP_VERSION="v39";
+/* 8.11.2026 LOG COLOURS. Used wherever a log is drawn on a TESTOSTERONE axis, where height is already
+   taken by testosterone so the colour has to carry the state.
+   Every one is an existing app colour, chosen by Jonas so the chart keeps the app's design: --red for
+   both ends, --steel for Lower range, --accent (ice blue) for Sweet spot, --yellow for High range.
+   Crashed and Above ceiling deliberately SHARE red: they are the two bad ends, and they are told apart
+   by sitting at the bottom or the top of the curve. Said on screen rather than left for him to work out.
+   NOTE: Sweet spot's ice blue is also the colour of the testosterone line itself. The dot stays legible
+   because points are drawn as a dark-filled ring, not a solid disc, but it is the one pairing to check
+   on a real phone screen. */
+const PALETTE={red:"#D92E3A", steel:"#5D7488", accent:"#4DB8D9", yellow:"#F0C040", teal:"#2A8A8F", violet:"#5B4FA8", text:"#EAF4F8", muted:"#9FBAC6", faint:"#5F7A86"};   // the same values as the CSS variables in :root. SVG attributes cannot read CSS variables, so the hex has to exist in JS too; naming it here means a log colour is never a loose hex that can drift from the palette
+const LOG_COLOR={crashed:PALETTE.red, below:PALETTE.steel, sweet_spot:PALETTE.accent, high_end:PALETTE.yellow, over:PALETTE.red};   // 8.11.2026: all five taken from the app's own palette at his instruction. Red is --red, steel is --steel, ice blue is --accent, amber is --yellow. No new colour is introduced.
+const logDots=()=>(DATA.reports||[]).concat(DATA.aboveRange||[]).filter(r=>r.state)
+  .map(r=>({t:ms(r.t), y:Tat(ms(r.t)), color:LOG_COLOR[r.state]||"#EAF4F8"}));
+const logKey=()=>`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 0;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted)">`+
+  LOG_STATES.map(st=>`<span><span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:${LOG_COLOR[st.k]};margin-right:4px"></span>${LOG_NAME[st.k].toUpperCase()}</span>`).join("")+`</div>`;
+const INFO_LOGDOTS=()=>({t:"Your logs on this chart",body:
+  `<p>Each dot is a feeling log, placed on the testosterone line at the moment you made it. The height is your testosterone then, so the colour carries what you felt.</p>`+
+  LOG_STATES.map(st=>`<p style="margin:6px 0"><span style="display:inline-block;width:14px;height:14px;border-radius:999px;background:${LOG_COLOR[st.k]};vertical-align:-2px;margin-right:10px"></span><span class="state" style="font-size:13px">${LOG_NAME[st.k]}</span><br><span class="sub" style="margin-left:24px">${st.desc}</span></p>`).join("")+
+  `<p class="k">The first and the last share a colour: there is no sixth colour that stays readable on a phone. They are told apart by where they sit, one at the bottom of the curve and one at the top.</p>
+   <p class="k">This is the pairing the logging exists to build: whether the upper states cluster at the higher testosterone levels. On the estradiol chart the same logs are read the other way round, height for the state and colour only to mark an above-range log.</p>`});   // 8.11.2026: a FUNCTION, not a const object. It reads LOG_STATES, which is declared further down the file, so evaluating it at load threw and killed the whole script.   // bumped with every release; stored on every log so a reader knows which build produced it
+/* 8.11.2026 CALIBRATED RANGE. Derived from his own steady-state logs, not from literature.
+   CAL_X: the point above which the estimate is NOT treated as calibrated, and above which a feeling log
+   is routed to DATA.aboveRange instead of DATA.reports. His clean steady Good logs sit at 2.3 to 4.1x
+   top of normal, four of the five between 2.3 and 2.6. The fortnight where the app tracked him averaged
+   3.0x; the stretch where it stopped averaged 4.0x and peaked 5.6x. He set the line at 3.
+   It is a TRIGGER, not a verified boundary: nothing at all has been measured between 2.6x and 3.5x.
+   CAL_GAP: at 3.5x to 5.2x his felt states ran about 25 pmol ABOVE the app's number, individual gaps
+   15 to 35, from five moments. Below 3x no gap was measurable, which is not the same as none. One moment at 5.2x
+   needs no gap and is unexplained. Never added to any displayed number; it is text only. */
+const CAL_X=3, CAL_GAP=25;   // bumped with every release; stored on every log so a reader knows which build produced it
 
 /* ============================ MODEL (literature, fixed) ============================ */
 const M={
@@ -209,7 +240,20 @@ const STATE=[
  {k:"over",      name:"Above ceiling",      desc:"Dreamy, bubble fog, not present, drugs blunted, libido down, dull nagging anxiety."}
 ];
 const SNAME=k=>(STATE.find(s=>s.k===k)||{name:k}).name;
-const LOG_NAME={crashed:"Crashed", below:"Low", sweet_spot:"Good", high_end:"Good", over:"Above ceiling"};   // what you log: named by what you can feel
+/* 8.11.2026 FIVE LOG LABELS, four model states.
+   What he LOGS is now five raw observations with no boundaries attached: the model does not interpret
+   them and no line learns from them (see LEARN_LINES). What the model DRAWS is still four states,
+   because the four bands are what the three state lines divide the chart into.
+   The five keys reuse keys the codebase already understands; high_end is the legacy key for the upper
+   half of Good and is read as sweet_spot anywhere the model still groups them. */
+const LOG_STATES=[
+ {k:"crashed",   name:"Crashed",       desc:"Acute anxiety, sense of doom, adrenaline, chills, flu-like."},
+ {k:"below",     name:"Lower range",   desc:"Flat, dry, dull. Something is missing, not quite content."},
+ {k:"sweet_spot",name:"Sweet spot",    desc:"Present, energetic, motivated. The calm middle."},
+ {k:"high_end",  name:"High range",    desc:"Still good, emotional upper end. Early warning, not yet wrong."},
+ {k:"over",      name:"Above ceiling", desc:"Dreamy, bubble fog, not present, drugs blunted, libido down, dull nagging anxiety."}
+];
+const LOG_NAME={crashed:"Crashed", below:"Lower range", sweet_spot:"Sweet spot", high_end:"High range", over:"Above ceiling"};   // what you log: named by what you can feel
 const LNAME=k=>LOG_NAME[k]||k;
 /* Objective range for MEN ON TESTOSTERONE, not the general population: Jonas's point is that a
    reference group has to be people like him. 147 pmol is 40 pg/mL, the top of the range clinics
@@ -513,7 +557,89 @@ function hisParams(){            // cached until any data or correction changes
   const key=[REV, DATA.inj.length, DATA.ai.length, DATA.reports.length, DATA.blood.length, (DATA.factors||[]).length, CORR&&CORR.S].join("|");
   if(key===_hpKey) return _hpVal;
   _hpVal=hisParamsRaw(); _hpKey=key; return _hpVal; }
-function hisParamsRaw(){ const vr=validatedReports(); const used=vr.used, res=engine(used);
+/* 8.11.2026 STATE-LINE LEARNING FROZEN, Jonas's decision. NOT deleted: every function below is intact
+   and switching LEARN_LINES back to true restores it exactly.
+   Why: a feeling log pairs his report with the app's estradiol estimate for that moment, and above about
+   3x top of normal that estimate reads roughly 25 pmol low (see CAL_X / CAL_GAP). A log made up there
+   would teach the lines a number known to be wrong, in one direction, so more logs would make the lines
+   worse rather than better. The lines therefore stay at START (77 / 105 / 132) until the conversion
+   curve is resolved. Nothing was lost: the learning set has been empty since the 4.11 archive.
+   BEFORE RESTORING: read the restore conditions in the handover. The starting lines are in pmol on the
+   CURRENT scale, so if the conversion curve changes they must be re-derived first. */
+const LEARN_LINES=false;
+/* ============ 8.11.2026 LOG METADATA SNAPSHOT ============
+   Every log stores a self-contained record of the moment it was made: what he reported, what the app
+   believed, and the constants that produced that belief.
+   WHY, in his words: recomputing a past log from the raw doses only works while the constants stay
+   still. Change an ester half-life or the anastrozole clearance and every past log is silently
+   reinterpreted against a model it was never made under. The snapshot also means an exported JSON shows
+   a reader exactly what he saw, instead of a reader recomputing from variables that have since moved.
+   Field names are flat and unabbreviated on purpose: a later reader must not need this file to know
+   what a field means. Nothing here is ever shown on screen.
+   The rolling averages are marked secondary because they are exploratory: his felt state follows
+   build-up over time, which the model treats as an instant, so storing three windows lets the one that
+   actually tracks him be found later from the data rather than chosen now. */
+function rollingAverage(fn, t, hours){ const n=24; let sum=0;
+  for(let i=0;i<=n;i++) sum+=fn(t-hours*3600000*i/n);
+  return sum/(n+1); }
+function logSnapshot(t){            // t in milliseconds
+  const hp=hisParams(), cut=cutoffs(hp.anchor,hp.ratio), H=effHalf();
+  const totalT=Tat(t), shbg=shbgAt(t), freePct=freeT(totalT,shbg), freeAbs=totalT*freePct/100;
+  const by=aiLoadBy(t, hp.aiHL, null), block=aiBlock(t, hp.aiHL, null, hp.Imax, hp.L50);
+  const e2=E2at(t,{Imax:hp.Imax,L50:hp.L50,aiHL:hp.aiHL});
+  const e2fn=tt=>E2at(tt,{Imax:hp.Imax,L50:hp.L50,aiHL:hp.aiHL});
+  return {
+    app_cache_version: APP_VERSION,
+    snapshot_taken_at: new Date().toISOString(),
+    // ---- what the app believed at the logged moment ----
+    total_testosterone_nmol_per_litre: r1(totalT),
+    testosterone_multiple_of_top_of_normal: +(totalT/30).toFixed(2),
+    free_testosterone_nmol_per_litre: +freeAbs.toFixed(3),
+    free_testosterone_percent_of_total: +freePct.toFixed(3),
+    shbg_nmol_per_litre_used: shbg,
+    albumin_g_per_decilitre_used: M.alb,
+    anastrozole_load_mg_equivalent: +by.anastrozole.toFixed(4),
+    exemestane_load_mg_anastrozole_equivalent: +by.exemestane.toFixed(4),
+    estradiol_production_blocked_percent: +(100*(1-block)).toFixed(1),
+    predicted_estradiol_pmol_per_litre: r0(e2),
+    predicted_state_key: stateOf(e2,cut),
+    state_line_crashed_to_low_pmol: r0(cut.crbe),
+    state_line_low_to_good_pmol: r0(cut.besw),
+    state_line_good_to_above_ceiling_pmol: r0(cut.hiov),
+    state_lines_are_learning: LEARN_LINES,
+    // ---- the constants that produced all of the above ----
+    constants: {
+      testosterone_scale: M.SCALE,
+      blood_correction_scale: CORR.S,
+      enanthate_release_half_life_days: +H.TE.toFixed(3),
+      undecanoate_release_half_life_days: +H.TU.toFixed(3),
+      propionate_release_half_life_hours: +(H.TP*24).toFixed(2),
+      conversion_half_maximum_free_t_nmol: M.KF,
+      conversion_levelling_starts_at_free_t_nmol: M.FCAP,
+      conversion_levelling_width: M.FB2,
+      conversion_scale_pmol: M.AF,
+      body_fat_reference_percent: M.FATREF,
+      body_fat_multiplier_per_10_points: M.FATPER10,
+      body_fat_factor_applied: +fatFactor(t).toFixed(4),
+      anastrozole_maximum_block_fraction: hp.Imax,
+      anastrozole_half_saturating_load_mg: hp.L50,
+      anastrozole_clearance_half_life_hours: hp.aiHL,
+      vermeulen_shbg_binding_constant: M.Kt,
+      vermeulen_albumin_binding_constant: M.Kalb
+    },
+    // ---- SECONDARY, exploratory, not primary information ----
+    secondary_rolling_averages: {
+      note: "Exploratory only. Stored so the averaging window that best matches his felt state can be found later from the data.",
+      estradiol_mean_previous_2_hours_pmol: r0(rollingAverage(e2fn,t,2)),
+      estradiol_mean_previous_4_hours_pmol: r0(rollingAverage(e2fn,t,4)),
+      estradiol_mean_previous_8_hours_pmol: r0(rollingAverage(e2fn,t,8)),
+      total_testosterone_mean_previous_2_hours_nmol: r1(rollingAverage(Tat,t,2)),
+      total_testosterone_mean_previous_4_hours_nmol: r1(rollingAverage(Tat,t,4)),
+      total_testosterone_mean_previous_8_hours_nmol: r1(rollingAverage(Tat,t,8))
+    }
+  };
+}
+function hisParamsRaw(){ const vr=validatedReports(); const used=LEARN_LINES?vr.used:[], res=engine(used);
   vr.setAside=[];   // kept as an empty list so older display code reads 0; the contradiction rule it came from was removed 5.11.2026
   return Object.assign(res,{vr}); }
 function tracks(t){
@@ -748,7 +874,7 @@ function idbOpen(){ return new Promise(res=>{ try{ const r=indexedDB.open("e2app
   }catch(e){ res(null); } }); }
 function idbSet(v){ try{ if(!idb)return; const tx=idb.transaction("kv","readwrite"); tx.objectStore("kv").put(JSON.parse(JSON.stringify(v)),"data"); }catch(e){} }
 function idbGet(){ return new Promise(res=>{ if(!idb)return res(null); try{ const rq=idb.transaction("kv","readonly").objectStore("kv").get("data"); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>res(null); }catch(e){ res(null); } }); }
-function ensureIds(){ ["inj","ai","reports","blood","factors","archived"].forEach(k=>(DATA[k]||[]).forEach(x=>{ if(!x.id) x.id="e"+Date.now().toString(36)+(_idc++); })); }
+function ensureIds(){ ["inj","ai","reports","aboveRange","blood","factors","archived"].forEach(k=>(DATA[k]||[]).forEach(x=>{ if(!x.id) x.id="e"+Date.now().toString(36)+(_idc++); })); }
 function setShbgFromBlood(){ }   // SHBG is time-stamped only (shbgAt); the default 9 is never overwritten, so a new value cannot leak backward
 function shbgAt(t){ // most recent measured SHBG at or before t, from factors or blood; default M.shbg (9)
   const src=[].concat(DATA.factors||[], DATA.blood||[]).filter(x=>x.shbg!=null).sort((a,b)=>ms(a.t)-ms(b.t));
@@ -761,7 +887,7 @@ function bodyfatAt(t){ const now=t==null?Date.now():t;   // straight line betwee
   for(let i=0;i<src.length-1;i++){ const a=src[i], b=src[i+1], ta=ms(a.t), tb=ms(b.t);
     if(now>=ta&&now<=tb) return tb>ta ? a.bodyfat+(b.bodyfat-a.bodyfat)*(now-ta)/(tb-ta) : b.bodyfat; }
   return last.bodyfat; }
-function normalize(d){ ["inj","ai","reports","blood","factors","anchorLog","archived"].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
+function normalize(d){ ["inj","ai","reports","aboveRange","blood","factors","anchorLog","archived"].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
   d.reports=d.reports.filter(r=>!(r.seeded && r.t==="2026-10-14T16:00" && r.state==="crashed"));   // removed at your request: 14.10 crash, time unknown, may not have been a crash
   d.migrations=Array.isArray(d.migrations)?d.migrations:[];
   if(!d.migrations.includes("log-check-24oct")){   // your corrected log of 24.10, applied once
@@ -907,6 +1033,12 @@ function trendNow(t){ // momentum (bands/day) + time to next boundary, on curren
 function pill(on,label,onclick){ return `<div onclick="${onclick}" style="flex:0 0 auto;padding:4px 11px;border:1px solid ${on?'var(--accent)':'var(--border)'};border-radius:999px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${on?'var(--accent)':'var(--muted)'};${on?'background:var(--tint);':''}cursor:pointer">${label}</div>`; }
 function viewToggle(fn){ return `<div style="display:flex;gap:6px;margin:8px 0 2px;flex-wrap:wrap">`+
   Object.keys(VIEWS).map(k=>pill(k===trendsView,VIEWS[k].label,`trendsView='${k}';${fn}()`)).join("")+`</div>`; }
+let winPlace="centre";
+let lookT=null;        // 8.11.2026: the moment being read in "Read a moment", in ms, or null
+let pendingLogT=null;  // 8.11.2026: a timestamp the Log tab should prefill instead of now   // 8.11.2026: where NOW sits inside the 14 days and Month windows
+function placeToggle(fn){ if(!VIEWS[trendsView].placeable) return "";
+  return `<div style="display:flex;gap:6px;margin:4px 0 2px;flex-wrap:wrap">`+
+  [["ahead","Ahead of now"],["centre","Now centred"],["back","Looking back"]].map(([k,l])=>pill(k===winPlace,l,`winPlace='${k}';${fn}()`)).join("")+`</div>`; }
 let e2mode="yours", previewDose=0, previewKind="anastrozole", chartShow="e2";
 function chartShowToggle(){ return `<div style="display:flex;gap:6px;margin:10px 0 2px;flex-wrap:wrap">`+
   [["e2","Estradiol"],["t","Testosterone"],["et","Estradiol + testosterone"]].map(([k,l])=>pill(k===chartShow,l,`chartShow='${k}';renderEstrogen()`)).join("")+`</div>`; }
@@ -946,7 +1078,7 @@ function lineToggle(){ return `<div style="display:flex;gap:6px;margin:10px 0 2p
   [["yours","Your estimate"],["objective","Objective"]].map(([k,l])=>pill(k===lineMode,l,`lineMode='${k}';renderEstrogen()`)).join("")+`</div>`; }
 
 function renderEstrogen(){
-  const t=Date.now(), tr=tracks(t), tn=trendNow(t), hp=tr.his.params, w=hp.w, v=VIEWS[trendsView];
+  const t=Date.now(), tr=tracks(t), tn=trendNow(t), hp=tr.his.params, w=hp.w, v=winView();
   const anchor=hp.anchor, cut=cutoffs(anchor,hp.ratio);
     const anchorDep=`<p class="k">Your lines START at fixed values in pmol: crashed 77, Good 105 to 132. They are no longer a ratio of a guessed day. 77 is the floor of the range for men on testosterone, raised a little because yours runs 2 to 3 times ordinary levels. 105 sits between a Low you felt at about 100 and your lowest Good logs at 109. 132 sits between your highest Good log, 126, and your lowest Above-ceiling log, 138.</p>
     <p class="k">From there each line moves ONLY when a log lands on its wrong side. A log that already agrees moves nothing, however many of them there are, and that holds when a line has logs on one side only. When the line has to move and logs sit on both sides, it goes to the middle of the stretch that disagrees with the fewest of them. Now: ${r0(cut.crbe)} / ${r0(cut.besw)} / ${r0(cut.hiov)} pmol.</p>`;
@@ -981,6 +1113,14 @@ function renderEstrogen(){
       for(let h=0;h<=30*24;h+=1){ const e=E2at(t+h*3600000,{Imax:hp.Imax,L50:hp.L50,aiHL:hp.aiHL}); if(e>=cut.hiov){ up=h; break; } }
       ceilTxt = up==null ? "Not reaching the ceiling within a month" :
         up<36 ? `Above ceiling in about ${up} h` : `Above ceiling in about ${(up/24).toFixed(1)} days`; } }
+  const xTopNow=Tat(t)/30;
+  const calCard = xTopNow<=CAL_X ? "" : `<div class="card alert">
+      <div class="row"><h2>Outside calibrated range</h2>${iBtn('calrange')}</div>
+      <div class="sub" style="color:var(--text)">Calibrated on your logs at 1 to ${CAL_X}x top of normal. You are at <span class="mono" style="color:var(--yellow)">${xTopNow.toFixed(1)}x</span>.</div>
+      <div class="sub" style="margin-top:6px">Above ${CAL_X}x it reads low: at 3.5 to 5x it ran about ${CAL_GAP} pmol under your felt state (range 15 to 35).</div></div>`;
+  INFO.calrange={t:"Outside calibrated range",body:`<p>The estimate was only ever checked against your own logs while you sat between 1 and ${CAL_X}x the top of normal testosterone. Above that it has not matched you.</p>
+    <p class="k">Where the number comes from: five moments between 3.5x and 5.2x where you reported how you felt. Against your own state lines the app read about ${CAL_GAP} pmol too low each time, the individual gaps running 15 to 35. Below ${CAL_X}x no gap could be measured, which is not the same as there being none: in the old four labels Good covered 105 to 132, so a shift that size would not have changed the label.</p>
+    <p class="k">Treat it as a rough shift, not a correction to apply. One moment at 5.2x fits the app with no gap at all and is not explained.</p>`};
   let trendCard;
   { const cap = tn.dir==="steady" ? "Steady" : tn.dir.charAt(0).toUpperCase()+tn.dir.slice(1)+" "+tn.rate;
     trendCard=`<div class="card"><div class="row"><h2>Trend</h2>${iBtn('trend')}</div>
@@ -1003,10 +1143,19 @@ function renderEstrogen(){
 
   for(let i=0;i<=60;i++){ const tt=Math.max(tMin,E2BLACKOUT)+(tMax-Math.max(tMin,E2BLACKOUT))*i/60; eMax=Math.max(eMax,hisHi(tt),modC(tt)); eMin=Math.min(eMin,hisLo(tt),modC(tt)); }
   eMax=Math.ceil(eMax*1.04/10)*10; eMin=Math.max(0,Math.floor(eMin*0.95/10)*10);
+  /* 8.11.2026 OBJECTIVE uses a FIXED scale, 50 to 150, in steps of 25, so a given distance on screen is the
+     same number of pmol in every view and on every day. His own range sits inside it: the lowest the app has
+     shown is about 62 and the highest about 160. It stretches upward in steps of 25, only while the curve
+     actually goes above the top, so nothing is ever drawn off the chart.
+     "Your estimate" keeps the old self-scaling behaviour, because its bands move with his lines. */
+  const OBJ_MIN=50, OBJ_STEP=25, OBJ_MAX=150;
+  if(useObj){ eMin=Math.min(OBJ_MIN, Math.floor(eMin/OBJ_STEP)*OBJ_STEP);
+              eMax=Math.max(OBJ_MAX, Math.ceil(eMax/OBJ_STEP)*OBJ_STEP); }
   let aiMax=0.3; for(let i=0;i<=40;i++){ aiMax=Math.max(aiMax,Lat(tMin+(tMax-tMin)*i/40)); }
   const stY={crashed:Math.max(eMin+4,cut.crbe-8), below:(cut.crbe+cut.besw)/2, sweet_spot:(cut.besw+cut.hiov)/2, high_end:(cut.besw+cut.hiov)/2, over:Math.min(eMax-4,cut.hiov+8)};
   const dropped=hp.vr.droppedUnsure.concat(DATA.reports.filter(r=>r.cleared));   // faint dots: unsure logs that do not fit, and logs you set aside by hand
-  const feelMarks=DATA.reports.filter(r=>r.state).map(r=>({t:ms(r.t),y:stY[r.state],color:dropped.includes(r)?"#5F7A86":"#EAF4F8"}));   // DATA.archived is never drawn: archived logs are noise on the chart
+  const feelMarks=DATA.reports.filter(r=>r.state).map(r=>({t:ms(r.t),y:stY[r.state],color:dropped.includes(r)?"#5F7A86":"#EAF4F8"}))
+    .concat((DATA.aboveRange||[]).filter(r=>r.state).map(r=>({t:ms(r.t),y:stY[r.state],color:"#F0C040"})));   // DATA.archived is never drawn. Above-range logs ARE drawn, in yellow, so he can see every log he made; they still never reach the learning
   let center,lo,hi,centerColor,bandColor,overlay=null;
   if(e2mode==="objective"){ center=modC; lo=bLo(M.Imax,M.L50,M.aiHL); hi=bHi(M.Imax,M.L50,M.aiHL); centerColor=COBJ; bandColor="rgba(91,79,168,0.22)"; }
   else { center=hisC; lo=hisLo; hi=hisHi; centerColor="#4DB8D9"; bandColor="rgba(77,184,217,0.15)";
@@ -1030,10 +1179,17 @@ function renderEstrogen(){
   const line2 = chartShow==="et"
     ? {fn:tt=>Tat(tt),max:tTop,color:"#EAF4F8",label:`testosterone (top of chart ${tTop} nmol/L)`}
     : {fn:tt=>e2mode==="objective"?Lat(tt):aiLoad(tt,hp.aiHL),max:aiMax*1.1,color:"#EAF4F8",label:"",blackoutBefore:E2BLACKOUT};
+  /* 8.11.2026 LOGS ON THE TESTOSTERONE CHART. Each log sits ON the testosterone curve at the moment it was
+     made, so height is his testosterone then, and the COLOUR is what he felt. That is the pairing the
+     above-range log exists to collect: whether the high-range and above-ceiling reports cluster at the
+     higher testosterone levels. Colour has to carry the state here because height is already spoken for. */
+  const tFeel=logDots();
   const tcfgE={nowT:t,back:v.back,fwd:v.fwd,yMin:0,yMax:tTop,center:tt=>Tat(tt),lo:tt=>Math.min(Tat(tt,eFast),Tat(tt,eSlow)),hi:tt=>Math.max(Tat(tt,eFast),Tat(tt,eSlow)),
-    centerColor:"#4DB8D9",bandColor:"rgba(77,184,217,0.15)",marks:DATA.inj.map(x=>({t:ms(x.t),kind:"inj"})),
-    hlines:[{y:30,color:"#5D7488",label:"top of normal 30"}]};
-  const e2cfg={nowT:t,back:v.back,fwd:v.fwd,yMin:eMin,yMax:eMax,center,lo,hi,centerColor,bandColor,overlay,preview:previewFn?{fn:previewFn,color:"#F0C040"}:null,points:feelMarks,hideY:true,blackoutBefore:E2BLACKOUT,marks,crossings,turns,edgeLabels:true,
+    centerColor:"#4DB8D9",bandColor:"rgba(77,184,217,0.15)",points:tFeel,marks:DATA.inj.map(x=>({t:ms(x.t),kind:"inj"})),
+    hlines:[{y:30,color:"#5D7488",label:"top of normal 30"},
+            {y:30*CAL_X,color:"#F0C040",label:"estimate calibrated to here ("+(30*CAL_X)+")"}]};
+  const e2cfg={nowT:t,back:v.back,fwd:v.fwd,yMin:eMin,yMax:eMax,center,lo,hi,centerColor,bandColor,overlay,preview:previewFn?{fn:previewFn,color:"#F0C040"}:null,points:feelMarks,hideY:true,blackoutBefore:E2BLACKOUT,marks,crossings,turns,edgeLabels:true,vline:lookT,
+    grid:useObj?{from:eMin,step:OBJ_STEP}:null,
     line2,
     shades:[],
     zones:useObj ? [] : [   // every state is a band you can see the width of, not a line
@@ -1044,7 +1200,28 @@ function renderEstrogen(){
     hlines:useObj
       ? [{y:NORM.lo,color:"#5D7488",label:"normal low "+NORM.lo},{y:NORM.hi,color:"#5D7488",label:"normal high "+NORM.hi}]
       : [{y:cut.crbe,color:"#5D7488",label:r0(cut.crbe)},{y:cut.besw,color:"#5D7488",label:r0(cut.besw)},{y:cut.hiov,color:"#D92E3A",label:"ceiling "+r0(cut.hiov)}]};
-  $("#v-estrogen").innerHTML = trendCard + `
+  /* 8.11.2026 READ A MOMENT. Type a date and time, get the estimate for that moment, the testosterone
+     multiple so he can see whether that moment sits inside the calibrated range, and the state name.
+     The out-of-range warning here is evaluated for the MOMENT BEING READ, not for now: he may be above
+     the range today while reading back a moment that was inside it, or the reverse. */
+  let lookupRead="";
+  if(lookT!=null){
+    const lx=Tat(lookT)/30, le=E2at(lookT,{Imax:hp.Imax,L50:hp.L50,aiHL:hp.aiHL}), lst=stateOf(le,cut);
+    lookupRead=`<div class="row" style="margin-top:14px;align-items:flex-end">
+        <div><div class="lab">Estradiol</div><div class="big">${r0(le)}<span class="unit"> pmol/L</span></div></div>
+        <div style="text-align:right"><div class="lab">Testosterone</div>
+          <div class="big" style="font-size:22px;color:${lx>CAL_X?"var(--yellow)":"var(--accent)"}">${lx.toFixed(1)}<span class="unit"> x top of normal</span></div></div>
+      </div>
+      <div class="state" style="margin-top:10px">${SNAME(lst)}</div>
+      ${lx>CAL_X?`<div class="notice warn" style="margin-top:8px">Outside the calibrated range. Reads low by about ${CAL_GAP} pmol here.</div>`:""}
+      ${(lookT<t-v.back*3600000||lookT>t+v.fwd*3600000)?`<div class="notice" style="margin-top:8px">That moment is outside the chart above, so no marker is drawn for it. Widen the time span, or set the window to Looking back.</div>`:""}
+      <button class="act sm" style="margin-top:10px" id="logAtMoment">Log a state at this time</button>`;
+  }
+  INFO.logdots=INFO_LOGDOTS();
+  INFO.readmoment={t:"Read a moment",body:`<p>Type any date and time to see what the app makes of that moment: the estradiol estimate, your testosterone as a multiple of the top of normal, and which state that falls in. A dashed yellow line marks it on the chart above.</p>
+    <p class="k">The warning here is about the moment you are reading, not about now. You can be outside the calibrated range today while reading back a moment that was inside it.</p>
+    <p class="k">"Log a state at this time" takes you to the Log tab with that date and time already filled in, so a log made after the fact still carries the right moment.</p>`};
+  $("#v-estrogen").innerHTML = `
     <div class="two">
       <div class="card"><div class="row"><h2>Objective</h2>${iBtn('model')}</div>
         <div class="big">${r0(tr.model.e)}<span class="unit"> pmol/L</span></div>
@@ -1056,29 +1233,40 @@ function renderEstrogen(){
         <div class="sub mono" style="margin-top:6px">${pctTxt}</div>
 </div>
     </div>
+    ${calCard}
     <div class="card"><div class="row"><div class="lab">How much is yours</div>${iBtn('weight')}</div>
       <div class="big" style="font-size:24px;margin-top:4px">${r0(w*100)}<span class="unit"> %</span></div>
       <div class="sub">You lead; the app is a second opinion.</div></div>
     <div class="card"><div class="row"><h2>Estradiol trajectory</h2>${iBtn('e2chart')}</div>
       <div style="margin:0 -12px">${svgChart(chartShow==="t"?tcfgE:e2cfg)}</div>
+      ${chartShow==="t"?logKey()+`<div class="sub faint" style="font-size:12px;margin-top:4px">Your logs, placed at your testosterone when you made them. ${iBtn('logdots')}</div>`:""}
       ${chartShowToggle()}
       ${chartShow==="t"?"":e2ModeToggle()}
       ${chartShow==="t"?"":lineToggle()}
-      ${viewToggle('renderEstrogen')}</div>
+      ${viewToggle('renderEstrogen')}${placeToggle('renderEstrogen')}</div>
+    <div class="card"><div class="row"><h2>Read a moment</h2>${iBtn('readmoment')}</div>
+      ${dtField('rmd','rmt',lookT?isoLocal(lookT).slice(0,10):todayISO(),lookT?isoLocal(lookT).slice(11,16):nowHM())}
+      <button class="act sm" style="margin-top:10px" id="doLookup">Read</button>
+      ${lookupRead}
+    </div>
     <div class="card"><div class="row"><h2>Try a dose</h2>${iBtn('trydose')}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px">
-        ${["anastrozole","exemestane"].map(k=>pill(previewKind===k, AI_KIND[k].label, `previewKind='${k}';previewDose=0;renderEstrogen()`)).join("")}
+        ${["anastrozole"].map(k=>pill(previewKind===k, AI_KIND[k].label, `previewKind='${k}';previewDose=0;renderEstrogen()`)).join("")}   <!-- 8.11.2026: exemestane removed from Try a dose only. It stays in the model and in the log, because a dose taken by accident must still be computed -->
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">
         ${(previewKind==="exemestane"?[0,6.25,12.5,18.75,25]:[0,0.06,0.12,0.25,0.5]).map(d=>pill(previewDose===d, d===0?"Off":d+" mg", `previewDose=${d};renderEstrogen()`)).join("")}
       </div>
-      ${previewRead?`<div class="sub">${previewRead}</div><div class="sub faint" style="margin-top:4px">Shown dashed amber on the graph. A projection, not a logged dose.</div>`:`<div class="sub">Pick an amount to see where it would take you, dashed on the graph above.</div>`}</div>
-    `;
+      ${previewRead?`<div class="sub">${previewRead}</div><div class="sub faint" style="margin-top:4px">Shown dashed amber on the graph. A projection, not a logged dose.</div>`:`<div class="sub">Pick an amount to see where it would take you, dashed on the graph above.</div>`}</div>`;
+  wireTimeInputs();
+  if($("#doLookup")) $("#doLookup").onclick=()=>{ const t=readDT('rmd','rmt');
+    if(!t){ toast("Time must be 24h, e.g. 16:00"); return; }
+    lookT=ms(t); renderEstrogen(); };
+  if($("#logAtMoment")) $("#logAtMoment").onclick=()=>{ pendingLogT=lookT; show("log"); };
 }
 
 let plannerThr=30;
 function renderTest(){
-  const t=Date.now(), T=Tat(t), v=VIEWS[trendsView], H=effHalf();
+  const t=Date.now(), T=Tat(t), v=winView(), H=effHalf();
   const shb=shbgAt(t);
   const freePct=freeT(T,shb), freeAbs=T*freePct/100;
   const freeCeil=30*freeT(30,shb)/100, freeMult=freeAbs/freeCeil; // free at the top of the normal total range, at your SHBG
@@ -1102,7 +1290,8 @@ function renderTest(){
   const tMin=t-v.back*3600000, tMax=t+v.fwd*3600000; let tMax2=35;
   for(let i=0;i<=60;i++){ tMax2=Math.max(tMax2,Tat(tMin+(tMax-tMin)*i/60,eSlow)); }
   tMax2=Math.ceil(tMax2*1.04/20)*20;
-  const tcfg={nowT:t,back:v.back,fwd:v.fwd,yMin:0,yMax:tMax2,center:tt=>Tat(tt),lo:tt=>Tat(tt,eFast),hi:tt=>Tat(tt,eSlow),marks,
+  INFO.logdots=INFO_LOGDOTS();   // 8.11.2026: the same dots and the same key as the estrogen tab's testosterone view
+  const tcfg={nowT:t,back:v.back,fwd:v.fwd,yMin:0,yMax:tMax2,center:tt=>Tat(tt),lo:tt=>Tat(tt,eFast),hi:tt=>Tat(tt,eSlow),marks,points:logDots(),
     shades:[{y0:10,y1:30,color:"rgba(42,138,143,0.14)"}],
     hlines:[{y:30,color:"#5D7488",label:"30 top of range"},{y:10,color:"#5D7488",label:"10 bottom"},{y:35,color:"#F0C040",label:"35 saturation"}]};
   // planner
@@ -1129,7 +1318,8 @@ function renderTest(){
     </div></div>
     <div class="card"><div class="row"><h2>Testosterone trajectory</h2>${iBtn('tchart')}</div>
       <div style="margin:0 -12px">${svgChart(tcfg)}</div>
-      ${viewToggle('renderTest')}
+      ${logDots().length?logKey()+`<div class="sub faint" style="font-size:12px;margin-top:4px">Your logs, placed at your testosterone when you made them. ${iBtn('logdots')}</div>`:""}
+      ${viewToggle('renderTest')}${placeToggle('renderTest')}
       ${T<35?`<div class="notice warn">Testosterone is below 35 nmol/L: it now drives estradiol again.</div>`:""}</div>
     <div class="card"><div class="row"><h2>What makes up the level</h2>${iBtn('breakdown')}</div>
       ${pieChart(t)}
@@ -1165,7 +1355,7 @@ function renderLog(){
   INFO.sureinfo={t:"Sure or unsure",body:`<p>Sure means you stand behind the read. Every sure log counts exactly the same, one vote, and stays. Super sure was removed on 5.11.2026: how certain a day feels says nothing about where a line belongs, and plenty of things other than estrogen can make a day feel clearly good or clearly bad.</p>
     <p class="k">Unsure means a real but soft read. It is held provisionally: your later sure reports keep it if it sits on the path they trace, or drop it to zero if it does not. Dropped ones aren't erased, they show faint on the graph and come back if later logs vindicate them.</p>
     <p class="k">Skip a day you genuinely can't read; a blank costs nothing.</p>`};
-  const chips=STATE.map(s=>`<div class="chip" data-k="${s.k}">${LNAME(s.k)}</div>`).join("");
+  const chips=LOG_STATES.map(s=>`<div class="chip" data-k="${s.k}">${LNAME(s.k)}</div>`).join("");
   $("#v-log").innerHTML=`
     <div class="card">
       <h2>Log an injection</h2>
@@ -1195,7 +1385,7 @@ function renderLog(){
         <div class="chip" data-s="unsure">Unsure</div>
       </div>
       <label class="fl"><div class="field-lab">Your words</div><textarea id="lgnote" placeholder="exactly what you notice"></textarea></label>
-      ${dtField('lgd','lgt',todayISO(),nowHM())}
+      ${dtField('lgd','lgt', pendingLogT?isoLocal(pendingLogT).slice(0,10):todayISO(), pendingLogT?isoLocal(pendingLogT).slice(11,16):nowHM())}
       <button class="act sm" style="margin-top:12px" id="saveReport">Save report</button>
       <div class="notice">Sweet spot and High are one state now, Good: you cannot reliably tell them apart, so a line between them would be learned from guesses. A log that already agrees with the lines changes nothing, and a log sitting exactly on a line disagrees with nothing. A line moves only when moving disagrees with at least 2 fewer logs than leaving it put, so one log on its own never shifts a line. Avoid logging in the hours right after a fast-acting shot: the level crosses before the feeling does.</div>
     </div>
@@ -1225,6 +1415,7 @@ function renderLog(){
     <div class="card"><h2>Recent entries</h2>${recentList()}</div>`;
 
   // state chips: tap select, long-press describe
+  pendingLogT=null;   // 8.11.2026: consumed once. "Log a state at this time" prefills the moment read in the lookup; the next visit to this tab defaults to now again
   document.querySelectorAll("#stchips .chip").forEach(c=>{ c.onclick=()=>selChip(c); });
   function selChip(c){ document.querySelectorAll("#stchips .chip").forEach(x=>x.classList.remove("sel")); c.classList.add("sel"); st.state=c.dataset.k; }
   document.querySelectorAll("#surechips .chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll("#surechips .chip").forEach(x=>x.classList.remove("sel")); c.classList.add("sel"); st.sure=c.dataset.s!=="unsure"; });
@@ -1238,8 +1429,19 @@ function renderLog(){
     const rep={t,note,seeded:false,sure:st.sure};
     rep.state=st.state;
     rep.predictedState=tr.model.state; rep.predictedE2=r0(tr.model.e); // prospective: model first
-    DATA.reports.push(rep); DATA.reports.sort((a,b)=>ms(a.t)-ms(b.t)); snapshotAnchor(); save();
-    confirmSave(rep.id,"Your report",[["What you felt",LNAME(rep.state)],["Level then",r0(eAt(rep,hisParams()))+" pmol/L"],["Date",fmtDay(rep.t)],["Time",rep.t.slice(11)]]); renderLog();
+    rep.meta=logSnapshot(ms(t));   // 8.11.2026: full self-contained snapshot, never shown on screen
+    /* 8.11.2026 STORAGE ROUTING. One log button and one form; where the log LANDS is decided by his
+       testosterone at that moment, not by him. Above CAL_X the estimate is not calibrated, so such a log
+       is observation for calibrating the conversion curve and must never reach the state-line learning,
+       even if that learning is switched back on later. Below CAL_X it is an ordinary feeling log.
+       HARD SEPARATION, his instruction: never wire one list into the other. */
+    const aboveRange = (rep.meta.testosterone_multiple_of_top_of_normal > CAL_X);
+    rep.above_calibrated_range = aboveRange;
+    if(aboveRange){ if(!DATA.aboveRange) DATA.aboveRange=[];
+      DATA.aboveRange.push(rep); DATA.aboveRange.sort((a,b)=>ms(a.t)-ms(b.t)); }
+    else { DATA.reports.push(rep); DATA.reports.sort((a,b)=>ms(a.t)-ms(b.t)); }
+    snapshotAnchor(); save();
+    confirmSave(rep.id,"Your report",[["What you felt",LNAME(rep.state)],["Level then",r0(eAt(rep,hisParams()))+" pmol/L"],["Testosterone",rep.meta.testosterone_multiple_of_top_of_normal.toFixed(1)+"x top of normal"],["Date",fmtDay(rep.t)],["Time",rep.t.slice(11)]]); renderLog();
   };
   $("#saveInj").onclick=()=>{ const mg=num("#injmg"), t=readDT('injd','injt');
     if(!mg){toast("Enter mg");return;} if(!inR(mg,10,2000,"Injection mg"))return; if(!t){toast("Time must be 24h, e.g. 16:00");return;}
@@ -1278,6 +1480,7 @@ function confirmSave(id,what,rows){
   $("#cbg").classList.add("on");
   $("#cok").onclick=()=>$("#cbg").classList.remove("on"); }
 function inR(x,lo,hi,lab){ if(x>=lo&&x<=hi) return true; toast(`${lab} must be ${lo} to ${hi}`); return false; }
+function isoLocal(msT){ const d=new Date(msT); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
 function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function nowHM(){ const d=new Date(); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
 function dtField(idD,idT,dd,tt){ const auto=(dd===todayISO()&&tt===nowHM())?"1":"0";   // untouched "now" fields save the moment you press save, not the moment the tab opened
@@ -1318,6 +1521,7 @@ function recentList(){
   DATA.inj.forEach(x=>items.push({t:x.t,txt:`${x.mg} mg ${({TE:"enanthate",TU:"undecanoate",TP:"propionate"})[x.ester]}`,tag:"inj"}));
   DATA.ai.forEach(x=>items.push({t:x.t,txt:`${x.mg} mg ${AI_KIND[aiKind(x)].label.toLowerCase()}`,tag:"ai"}));
   DATA.reports.forEach(x=>items.push({t:x.t,txt:x.ambiguous?`"${x.note}" (ambiguous)`:`${LNAME(x.state)}`,tag:"you"}));
+  (DATA.aboveRange||[]).forEach(x=>items.push({t:x.t,txt:`${LNAME(x.state)} (above range, ${x.meta?x.meta.testosterone_multiple_of_top_of_normal.toFixed(1):"?"}x)`,tag:"you"}));
   (DATA.blood||[]).forEach(x=>items.push({t:x.t,txt:`blood: T ${x.tt} nmol/L`,tag:"blood"}));
   (DATA.factors||[]).forEach(x=>{ const p=[]; if(x.weight!=null)p.push(`${x.weight} kg`); if(x.bodyfat!=null)p.push(`${x.bodyfat}% fat`); if(x.shbg!=null)p.push(`SHBG ${x.shbg}`); items.push({t:x.t,txt:`body: ${p.join(", ")}`,tag:"body"}); });
   items.sort((a,b)=>ms(b.t)-ms(a.t));
@@ -1325,7 +1529,13 @@ function recentList(){
 }
 
 let trendsView="week";
-const VIEWS={day:{back:12,fwd:12,label:"Day",marks:true},week:{back:12,fwd:168,label:"Week",marks:true},tenday:{back:96,fwd:96,label:"8 days"},month:{back:48,fwd:720,label:"Month"}};
+const VIEWS={day:{back:12,fwd:12,label:"Day",marks:true},week:{back:12,fwd:168,label:"Week",marks:true},tenday:{back:96,fwd:96,label:"8 days"},fortnight:{span:336,label:"14 days",placeable:true},month:{span:768,label:"Month",placeable:true}};
+/* 8.11.2026: the two long views carry a span instead of a fixed back/fwd, and winPlace decides where NOW sits inside it.
+   "ahead" keeps a small slice of the past so the curve is already arriving at the NOW line instead of starting on it. */
+function winView(){ const v=VIEWS[trendsView]; if(!v.placeable) return v; const s=v.span, edge=Math.round(s*0.08);
+  if(winPlace==="ahead") return {back:edge,fwd:s,label:v.label,placeable:true};
+  if(winPlace==="back")  return {back:s,fwd:edge,label:v.label,placeable:true};
+  return {back:Math.round(s/2),fwd:Math.round(s/2),label:v.label,placeable:true}; }
 const E2BLACKOUT=ms("2026-10-12T16:00");
 const MONO="'Space Mono',monospace";
 
@@ -1365,6 +1575,10 @@ function svgChart(cfg){
     s+=`<rect x="${padL}" y="${padT}" width="${(x-padL).toFixed(1)}" height="${H-padT-padB}" fill="rgba(4,12,16,0.6)"/>`;
     s+=`<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${H-padB}" stroke="#5D7488" stroke-dasharray="3 3"/>`;
     s+=`<text x="${(x-4).toFixed(1)}" y="${padT+10}" fill="#5F7A86" font-family="${MONO}" font-size="9" text-anchor="end">unlogged AI</text>`; }
+  if(cfg.vline!=null && cfg.vline>=tMin && cfg.vline<=tMax){   // 8.11.2026: the moment being read in "Read a moment", dashed yellow so it never reads as the solid NOW line
+    const xv=X(cfg.vline).toFixed(1), yv=Y(cfg.center(cfg.vline)).toFixed(1);
+    s+=`<line x1="${xv}" y1="${padT}" x2="${xv}" y2="${H-padB}" stroke="#F0C040" stroke-width="1.4" stroke-dasharray="5 4"/>`;
+    s+=`<circle cx="${xv}" cy="${yv}" r="4.5" fill="#F0C040"/>`; }
   if(cfg.crossings&&cfg.crossings.length){ const rows=[], CW=7.4;   // label font 12 in a 680-wide chart, about 6.5 px on a phone
     for(const c of cfg.crossings){ if(c.t<tMin||c.t>tMax) continue; const x=X(c.t), d=new Date(c.t);
       const hm=d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}), dm=d.toLocaleDateString("en-GB",{day:"2-digit",month:"2-digit"});
@@ -1386,6 +1600,13 @@ function svgChart(cfg){
       s+=`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${w}" height="15" rx="3" fill="rgba(6,24,31,0.9)" stroke="rgba(77,184,217,0.35)"/>`;
       s+=`<text x="${(bx+w/2).toFixed(1)}" y="${(by+11.5).toFixed(1)}" fill="#4DB8D9" font-family="${MONO}" font-size="11" font-weight="700" text-anchor="middle">${lab}</text>`;
       s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="#4DB8D9"/>`; } }
+  if(cfg.grid){   /* 8.11.2026 OBJECTIVE GRID. A tick and a faint line every step, so every gap on screen is the
+       same number of pmol. Before this the only labels were the range lines (77, 147), which are not evenly
+       spaced, so equal distances on screen carried unequal numbers and the chart looked inconsistent. */
+    for(let gv=cfg.grid.from; gv<=cfg.yMax+1e-9; gv+=cfg.grid.step){ const gy=Y(gv).toFixed(1);
+      s+=`<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#9FBAC6" stroke-width="0.7" opacity="0.18"/>`;
+      s+=`<line x1="${padL}" y1="${gy}" x2="${padL+7}" y2="${gy}" stroke="#9FBAC6" stroke-width="1.4" opacity="0.75"/>`;
+      s+=`<text x="${padL+11}" y="${(+gy+4).toFixed(1)}" fill="#9FBAC6" font-family="${MONO}" font-size="11" opacity="0.85">${Math.round(gv)}</text>`; } }
   if(cfg.edgeLabels){   // the y-axis does not start at zero, so without these the Crashed band looks as narrow as Low
     s+=`<text x="${padL+2}" y="${(H-padB-4).toFixed(1)}" fill="#9FBAC6" font-family="${MONO}" font-size="11">${Math.round(cfg.yMin)} pmol</text>`;
     s+=`<text x="${padL+2}" y="${(padT+11).toFixed(1)}" fill="#9FBAC6" font-family="${MONO}" font-size="11">${Math.round(cfg.yMax)} pmol</text>`; }
@@ -1398,6 +1619,10 @@ function svgChart(cfg){
     if(m.kind==="inj") s+=`<path d="M${x} ${yb-8} l3 6 l-6 0 Z" fill="#4DB8D9"/>`;
     else s+=`<circle cx="${x}" cy="${(yb-3)}" r="2.3" fill="#F0C040"/>`; }
   for(const p of (cfg.points||[])){ if(p.t<tMin||p.t>tMax)continue; const x=X(p.t).toFixed(1), y=Y(p.y).toFixed(1);
+    /* 8.11.2026: a dark halo under every log dot. Without it a dot sitting ON a line of its own colour
+       (Sweet spot's ice blue is also the testosterone line) disappears into it. The halo is the chart
+       background, so it reads as a gap around the dot rather than as another colour. */
+    s+=`<circle cx="${x}" cy="${y}" r="6.2" fill="none" stroke="#06181F" stroke-width="2.4" opacity="0.95"/>`;
     s+=`<circle cx="${x}" cy="${y}" r="4.6" fill="rgba(6,24,31,0.9)" stroke="${p.color||'#EAF4F8'}" stroke-width="1.8"/>`; }
   if(!cfg.hideY) for(const v of [cfg.yMin,(cfg.yMin+cfg.yMax)/2,cfg.yMax]){ const y=Y(v).toFixed(1);
     s+=`<text x="${padL-5}" y="${(+y+5).toFixed(1)}" fill="#9FBAC6" font-family="${MONO}" font-size="15" text-anchor="end">${Math.round(v)}</text>`; }
@@ -1464,7 +1689,7 @@ function renderData(){
 }
 function dismissReview(i){ if(DATA.blood&&DATA.blood[i]){ DATA.blood[i].reviewDismissed=true; save(); renderTest(); } }
 function delEntry(id){
-  ["inj","ai","reports","blood","factors","archived"].forEach(k=>{ DATA[k]=(DATA[k]||[]).filter(x=>x.id!==id); });
+  ["inj","ai","reports","aboveRange","blood","factors","archived"].forEach(k=>{ DATA[k]=(DATA[k]||[]).filter(x=>x.id!==id); });
   setShbgFromBlood();
   if(DATA.blood.length) recomputeCorrection(); else { CORR={dTE:0,dTU:0,dTP:0,S:1,provisional:false,nDraws:0,informs:{TE:0,TU:0,TP:0}}; saveCorr(); }
   save(); if(curView==="entries") renderEntries(); else showEntries();
@@ -1508,6 +1733,7 @@ function showRefs(){
 const ESTER_NAME={TE:"enanthate",TU:"undecanoate",TP:"propionate"};
 function entryKind(x){   // which list an entry belongs to; archived entries carry it on themselves
   if(x.from) return x.from;
+  if(x.above_calibrated_range) return "aboveRange";   // 8.11.2026
   if(x.ester) return "inj";
   if(x.tt!=null) return "blood";
   if(x.state!==undefined || x.ambiguous) return "reports";
@@ -1521,7 +1747,7 @@ function entryText(x,kind){
   if(kind==="factors"){ const p=[]; if(x.weight!=null)p.push(`${x.weight} kg`); if(x.bodyfat!=null)p.push(`${x.bodyfat}% fat`); if(x.shbg!=null)p.push(`SHBG ${x.shbg}`); return `body: ${p.join(", ")}`; }
   return x.ambiguous?`felt "${x.note}" (ambiguous)`:`felt ${LNAME(x.state)} at ${r0(eAt(x,hisParams()))} pmol`;
 }
-const ENTRY_PRI={inj:0, ai:1, reports:2, blood:3, factors:4};
+const ENTRY_PRI={inj:0, ai:1, reports:2, aboveRange:2, blood:3, factors:4};
 function entryRows(src,archived){
   ensureIds();
   const esterName=ESTER_NAME;
@@ -1532,6 +1758,7 @@ function entryRows(src,archived){
     (DATA.blood||[]).forEach(x=>add(x.t,3,entryText(x,"blood"),x.id));
     (DATA.factors||[]).forEach(x=>add(x.t,4,entryText(x,"factors"),x.id));
     src.forEach(x=>add(x.t,2,entryText(x,"reports"),x.id,true));
+    (DATA.aboveRange||[]).forEach(x=>add(x.t,2,entryText(x,"reports")+" (above range, not used by the lines)",x.id,true));   // 8.11.2026
   } else {
     src.forEach(x=>{ const k=entryKind(x); add(x.t,ENTRY_PRI[k],entryText(x,k),x.id,k==="reports"); });
   }
@@ -1557,7 +1784,7 @@ function entryRows(src,archived){
    which is the only honest record of whether the app got it right. The live figure beside it will differ once a
    blood draw or a later dose changes the curve behind it. */
 function openLogDetail(id){
-  const all=(DATA.reports||[]).concat(DATA.archived||[]), x=all.find(r=>r.id===id); if(!x) return;
+  const all=(DATA.reports||[]).concat(DATA.aboveRange||[],DATA.archived||[]), x=all.find(r=>r.id===id); if(!x) return;
   const live=r0(eAt(x,hisParams())), hp=hisParams(), c=cutoffs(hp.anchor,hp.ratio);
   const liveState=SNAME(stateOf(live,c));
   const rows=[["You logged", x.ambiguous?"ambiguous":LNAME(x.state)],
@@ -1610,7 +1837,7 @@ function afterArchiveChange(){
   save();
 }
 function archiveEntry(id){
-  for(const k of ["inj","ai","reports","blood","factors"]){
+  for(const k of ["inj","ai","reports","aboveRange","blood","factors"]){
     const i=(DATA[k]||[]).findIndex(x=>x.id===id);
     if(i<0) continue;
     const x=DATA[k].splice(i,1)[0]; x.from=k;
@@ -1629,7 +1856,7 @@ function restoreEntry(id){
   afterArchiveChange(); showArchived(); if(curView==="entries") renderEntries();
 }
 function findEntry(id){
-  for(const k of ["inj","ai","reports","blood","factors","archived"]){
+  for(const k of ["inj","ai","reports","aboveRange","blood","factors","archived"]){
     const x=(DATA[k]||[]).find(y=>y.id===id); if(x) return {k,x}; }
   return null;
 }
@@ -1641,7 +1868,8 @@ function editEntry(id){
     <label class="fl"><div class="field-lab">mg</div><input type="text" id="edmg" inputmode="decimal" value="${x.mg}"></label>`;
   if(f.k==="ai") body+=`<label class="fl"><div class="field-lab">Which one</div><select id="edkind">${Object.keys(AI_KIND).map(k=>`<option value="${k}"${aiKind(x)===k?" selected":""}>${AI_KIND[k].label}</option>`).join("")}</select></label>
     <label class="fl"><div class="field-lab">mg</div><input type="text" id="edmg" inputmode="decimal" value="${x.mg}"></label>`;
-  if(f.k==="reports"||f.k==="archived") body+=`<label class="fl"><div class="field-lab">State</div><select id="edstate">${STATE.map(st=>`<option value="${st.k}"${x.state===st.k?" selected":""}>${LNAME(st.k)}</option>`).join("")}</select></label>
+  const isFeel=(f.k==="reports"||f.k==="aboveRange"||(f.k==="archived"&&["reports","aboveRange"].includes(entryKind(x))));   // 8.11.2026: was f.k==="archived", which also gave archived injections and doses a state field
+  if(isFeel) body+=`<label class="fl"><div class="field-lab">State</div><select id="edstate">${LOG_STATES.map(st=>`<option value="${st.k}"${x.state===st.k?" selected":""}>${LNAME(st.k)}</option>`).join("")}</select></label>
     <label class="fl"><div class="field-lab">Confidence</div><select id="edconf">
       <option value="unsure"${x.sure===false?" selected":""}>Unsure</option>
       <option value="sure"${x.sure!==false?" selected":""}>Sure</option></select></label>
@@ -1660,25 +1888,33 @@ function editEntry(id){
     const g=id2=>{ const el=$("#"+id2); return el?String(el.value||"").trim().replace(",","."):null; };
     if(f.k==="inj"){ const mg=parseFloat(g('edmg')); if(!inR(mg,10,2000,"Injection mg"))return; x.mg=mg; x.ester=$("#edes").value; }
     if(f.k==="ai"){ const kind=$("#edkind").value, K=AI_KIND[kind], mg=parseFloat(g('edmg')); if(!inR(mg,K.lo,K.hi,K.label+" mg"))return; x.mg=mg; x.kind=kind; }
-    if(f.k==="reports"||f.k==="archived"){ x.state=$("#edstate").value; const c=$("#edconf").value;
+    if(isFeel){ x.state=$("#edstate").value; const c=$("#edconf").value;
       x.sure=c!=="unsure"; delete x.superSure; x.note=$("#ednote").value.trim(); delete x.ambiguous; }
     if(f.k==="blood"){ const tt=parseFloat(g('edtt')); if(!inR(tt,0.1,300,"Total T nmol/L"))return; x.tt=tt; }
     if(f.k==="factors"){ const w=parseFloat(g('edw')), bf=parseFloat(g('edbf')), sh=parseFloat(g('edshbg'));
       x.weight=isFinite(w)?w:undefined; x.bodyfat=isFinite(bf)?bf:undefined; x.shbg=isFinite(sh)?sh:undefined; }
-    x.t=t; DATA[f.k].sort((a,b)=>ms(a.t)-ms(b.t));
+    x.t=t;
+    if(isFeel){   /* 8.11.2026: the snapshot describes a MOMENT, so a new time needs a new snapshot, and the new
+         moment may sit on the other side of CAL_X. Archived logs need this too: without it an archived log edited
+         to a new time kept a stale snapshot and a stale "from", so restoring it afterwards put it in the wrong list. */
+      x.meta=logSnapshot(ms(t)); const tr=tracks(ms(t)); x.predictedState=tr.model.state; x.predictedE2=r0(tr.model.e);
+      const up=x.meta.testosterone_multiple_of_top_of_normal>CAL_X, dest=up?"aboveRange":"reports"; x.above_calibrated_range=up;
+      if(f.k==="archived"){ x.from=dest; }                      // where Restore will send it
+      else if(dest!==f.k){ DATA[f.k]=DATA[f.k].filter(y=>y.id!==x.id); DATA[dest]=(DATA[dest]||[]).concat([x]); f.k=dest; } }
+    DATA[f.k].sort((a,b)=>ms(a.t)-ms(b.t));
     if(DATA.blood.length) recomputeCorrection();
     save(); $("#sheetbg").classList.remove("on");
-    confirmSave(x.id,"The change",[["Entry",f.k==="reports"||f.k==="archived"?LNAME(x.state):"updated"],["Date",fmtDay(t)],["Time",t.slice(11)]]);
+    confirmSave(x.id,"The change",[["Entry",isFeel?LNAME(x.state):"updated"],["Date",fmtDay(t)],["Time",t.slice(11)]]);
     f.k==="archived"?showArchived():showEntries();
   };
 }
 function showWords(){
-  const rows=DATA.reports.map(r=>{
+  const rows=DATA.reports.concat(DATA.aboveRange||[]).sort((a,b)=>ms(a.t)-ms(b.t)).map(r=>{   // 8.11.2026: his own words matter wherever the log landed
     const mod = r.seeded ? SNAME(stateOf(E2at(ms(r.t)),liveCut())) : (r.predictedState?SNAME(r.predictedState):"-");
     const his = r.ambiguous ? "ambiguous" : LNAME(r.state);
     return `<tr class="${r.conflict?'conflict':''}"><td class="mono" style="font-size:12px">${fmtDT(r.t)}</td><td>"${r.note}"</td><td class="mono" style="font-size:12px">${his}</td><td class="mono faint" style="font-size:12px">${mod}</td></tr>`;
   }).join("");
-  const amb=DATA.reports.filter(r=>r.ambiguous).map(r=>`<div class="list-row"><span>"${r.note}"</span><span class="faint mono" style="font-size:12px">${fmtDT(r.t)}</span></div>`).join("")||`<div class="sub">None.</div>`;
+  const amb=DATA.reports.concat(DATA.aboveRange||[]).filter(r=>r.ambiguous).map(r=>`<div class="list-row"><span>"${r.note}"</span><span class="faint mono" style="font-size:12px">${fmtDT(r.t)}</span></div>`).join("")||`<div class="sub">None.</div>`;
   $("#morepane").innerHTML=`<div class="card"><h2>Vocabulary index</h2>
     <p class="sub">Your exact words, the state you chose, and the state the model computed, side by side. The model never labels your words.</p>
     <table><thead><tr><th>When</th><th>Your words</th><th>You</th><th>Model</th></tr></thead><tbody>${rows}</tbody></table>
@@ -1688,6 +1924,10 @@ function showWords(){
   scrollPane();
 }
 function showValidation(){
+  /* 8.11.2026: scored on DATA.reports ONLY, deliberately. Above CAL_X the estimate is known to read low,
+     so counting those logs here would score the app against numbers it is already known to get wrong and would
+     make the hit rate meaningless. Those logs are kept, shown in Entries and in the vocabulary index, and are
+     calibration data for the conversion curve rather than a score. */
   const prosp=DATA.reports.filter(r=>!r.seeded && r.state && r.predictedState);
   let body;
   if(!prosp.length){ body=`<p class="sub">No prospective entries yet. Every report you log from now records the model's prediction first, then your state, then the gap. Seeded history is retrospective and not scored here.</p>`; }
