@@ -173,7 +173,7 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
 <script>
 "use strict";
 const LN2=Math.LN2;
-const APP_VERSION="v39";   // bumped with every release; stored on every log so a reader knows which build produced it
+const APP_VERSION="v40";   // bumped with every release; stored on every log so a reader knows which build produced it
 /* 8.11.2026 LOG COLOURS. Used wherever a log is drawn on a TESTOSTERONE axis, where height is already
    taken by testosterone so the colour has to carry the state.
    Every one is an existing app colour, chosen by Jonas so the chart keeps the app's design: --red for
@@ -1471,7 +1471,7 @@ function renderLog(){
 }
 function verifySaved(id){   // read the entry back out of storage: "saved" is never shown on trust
   try{ const j=localStorage.getItem("e2model"); if(!j) return false; const d=JSON.parse(j);
-    return ["inj","ai","reports","blood","factors","archived"].some(k=>(d[k]||[]).some(x=>x&&x.id===id));
+    return ["inj","ai","reports","aboveRange","blood","factors","archived"].some(k=>(d[k]||[]).some(x=>x&&x.id===id));   // 8.11.2026: aboveRange MUST be here. Without it a log made above CAL_X saved correctly and was then reported "Not saved", because the read-back looked in the wrong lists. Any new list added to DATA has to be added here too.
   }catch(e){ return false; } }
 function confirmSave(id,what,rows){
   const ok=verifySaved(id), box=$("#cbox");
