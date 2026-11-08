@@ -173,7 +173,7 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
 <script>
 "use strict";
 const LN2=Math.LN2;
-const APP_VERSION="v43";   // bumped with every release; stored on every log so a reader knows which build produced it
+const APP_VERSION="v44";   // bumped with every release; stored on every log so a reader knows which build produced it
 /* 8.11.2026 LOG COLOURS. Used wherever a log is drawn on a TESTOSTERONE axis, where height is already
    taken by testosterone so the colour has to carry the state.
    Every one is an existing app colour, chosen by Jonas so the chart keeps the app's design: --red for
@@ -431,6 +431,7 @@ const ratioMap=R=>({crashed:[0,R.crbe],below:[R.crbe,R.besw],sweet_spot:[R.besw,
 const ARATIO=ratioMap(M.ratio);
 function isStartDay(r){ return r.state==="sweet_spot" && r.t===M.refDate; }   // 16.10 counts once: as the start, not again as a log
 function weight(){ return hisParams().w; }
+/* NOT IN USE: part of the frozen learning system. See handover §9.9. */
 function fitLevel(rows, startE, startW, AR){ AR=AR||ARATIO;   // weighted votes in log space: start + every log; returns the sweet spot level A (pmol/L)
   const lnS=Math.log(startE), n=rows.length, W=new Float64Array(n), P=new Float64Array(n), LO=new Float64Array(n), HI=new Float64Array(n), SW=new Uint8Array(n);
   for(let i=0;i<n;i++){ const x=rows[i], le=Math.log(x.e); W[i]=x.w;   // logs and limits computed once, not on every step of the search
@@ -444,6 +445,7 @@ function fitLevel(rows, startE, startW, AR){ AR=AR||ARATIO;   // weighted votes 
   for(let i=0;i<30;i++){ const m1=a+(b-a)/3, m2=b-(b-a)/3; if(cost(m1)<=cost(m2)) b=m2; else a=m1; }   // 30 steps: precise to 0.01%
   const lnA=(a+b)/2; return {A:Math.exp(lnA), cost:cost(lnA)}; }
 const _drugMemo=new Map();
+/* NOT IN USE: part of the frozen drug-parameter learning, locked to research values 5.11.2026. See handover §9.9. */
 function fitDrug(logs){ const key=REV+"|"+logs.map(r=>r.t+r.state).sort().join(",");
   if(_drugMemo.has(key)) return _drugMemo.get(key); if(_drugMemo.size>20) _drugMemo.clear();
   const v=fitDrugRaw(logs); _drugMemo.set(key,v); return v; }
@@ -536,6 +538,7 @@ function engine(logs){   // LOCKED: anastrozole strength and clearance stay at t
    one ends up on the wrong side. Deleting one instead left the line where the surviving log wanted it, and it fired
    exactly when the two logs were most evenly matched, which is when there is least ground to pick one.
    Nothing replaces it: every log now reaches the vote. */
+/* NOT IN USE: superseded by the pmol scale. See handover §9.9. */
 function screenScale(hp){   // one even stretch: sweet spot middle = 100; room past each outer line = twice the neighbouring state's width
   const R=hp.ratio, floor=R.crbe-2*(R.besw-R.crbe), top=R.hiov+2*(R.hiov-1), f=1/(1-floor);
   const at=x=>100+(x-1)*100*f, max=at(top);
@@ -686,6 +689,7 @@ function e2ai(w,hl){ // E2 with a custom anastrozole elimination half-life (for 
   const T=Tat(w); return prodE(T,w)*aiBlock(w, hl); }
 function e2t(w,hl){ // E2 with a custom testosterone-release band (for falling)
   const T=Tat(w,hl); return prodE(T,w)*aiBlock(w); }
+/* NOT IN USE: declared, never called. Wired to no screen. See handover §9.9. */
 function alertNow(t){
   const cut=liveCut();
   const crossUp=(fn)=>{ for(let h=0;h<=14*24;h+=1){ const w=t+h*3600000; if(fn(w)>cut.hiov) return h/24; } return null; };
@@ -720,6 +724,7 @@ function crossDate(thr,hl){
   for(let h=0;h<=80*24;h+=6){ const w=t0+h*3600000; if(Tat(w,hl)<thr) return w; }
   return null;
 }
+/* NOT IN USE: declared, never called. See handover §9.9. */
 function bloodPlan(thr){
   const central=crossDate(thr,null);
   const early=crossDate(thr,{TE:3.4,TU:29,TP:19/24});   // fast release -> earliest
@@ -905,6 +910,7 @@ function setShbgFromBlood(){ }   // SHBG is time-stamped only (shbgAt); the defa
 function shbgAt(t){ // most recent measured SHBG at or before t, from factors or blood; default M.shbg (9)
   const src=[].concat(DATA.factors||[], DATA.blood||[]).filter(x=>x.shbg!=null).sort((a,b)=>ms(a.t)-ms(b.t));
   let v=M.shbg; for(const x of src){ if(ms(x.t)<=t) v=x.shbg; else break; } return v; }
+/* NOT IN USE: declared, never called. See handover §9.9. */
 function latestFactor(key,t){ const now=t==null?Date.now():t;
   const src=(DATA.factors||[]).filter(x=>x[key]!=null&&ms(x.t)<=now).sort((a,b)=>ms(b.t)-ms(a.t)); return src.length?src[0][key]:null; }
 function bodyfatAt(t){ const now=t==null?Date.now():t;   // straight line between your body fat logs; before the first and after the last it holds that value; none logged = null
@@ -1001,6 +1007,7 @@ $("#sheetbg").addEventListener("click",e=>{ if(e.target.id==="sheetbg") $("#shee
 $("#cbg").addEventListener("click",e=>{ if(e.target.id==="cbg") $("#cbg").classList.remove("on"); });
 
 const ESTCOL={TE:"#4DB8D9", TU:"#2A8A8F", TP:"#5B4FA8"};
+/* NOT IN USE: the Testosterone tab uses pieChart instead. See handover §9.9. */
 function stackedChart(nowT, back, fwd, yMax){ // per-ester contribution to total T
   const W=680,H=180,padL=42,padR=8,padT=14,padB=30, short=back<=12;
   const tMin=nowT-back*3600000, tMax=nowT+fwd*3600000, N=90;
@@ -1150,6 +1157,10 @@ function renderEstrogen(){
   INFO.calrange={t:"Outside calibrated range",body:`<p>The estimate was only ever checked against your own logs while you sat between 1 and ${CAL_X}x the top of normal testosterone. Above that it has not matched you.</p>
     <p class="k">Where the number comes from: five moments between 3.5x and 5.2x where you reported how you felt. Against your own state lines the app read about ${CAL_GAP} pmol too low each time, the individual gaps running 15 to 35. Below ${CAL_X}x no gap could be measured, which is not the same as there being none: in the old four labels Good covered 105 to 132, so a shift that size would not have changed the label.</p>
     <p class="k">Treat it as a rough shift, not a correction to apply. One moment at 5.2x fits the app with no gap at all and is not explained.</p>`};
+  /* NOT IN USE since 8.11.2026. Built on every render and never inserted into any innerHTML: the Trend
+     card was removed from the Estrogen page because the graph already shows how fast the level moves.
+     KEPT, not deleted, because it is the only place the ceiling countdown is computed. See handover §9.9.
+     Do not read this as a live feature, and do not delete it without asking. */
   let trendCard;
   { const cap = tn.dir==="steady" ? "Steady" : tn.dir.charAt(0).toUpperCase()+tn.dir.slice(1)+" "+tn.rate;
     trendCard=`<div class="card"><div class="row"><h2>Trend</h2>${iBtn('trend')}</div>
