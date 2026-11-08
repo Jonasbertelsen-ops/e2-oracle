@@ -173,7 +173,7 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
 <script>
 "use strict";
 const LN2=Math.LN2;
-const APP_VERSION="v42";   // bumped with every release; stored on every log so a reader knows which build produced it
+const APP_VERSION="v43";   // bumped with every release; stored on every log so a reader knows which build produced it
 /* 8.11.2026 LOG COLOURS. Used wherever a log is drawn on a TESTOSTERONE axis, where height is already
    taken by testosterone so the colour has to carry the state.
    Every one is an existing app colour, chosen by Jonas so the chart keeps the app's design: --red for
@@ -2109,10 +2109,18 @@ function showImport(){
   scrollPane(); }
 function scrollPane(){ setTimeout(()=>$("#morepane").scrollIntoView({behavior:"smooth",block:"start"}),40); }
 
+function exportName(){   // 8.11.2026: the backup is named by the moment it was taken, so files sort by date and never collide
+  const d=new Date(); const p=n=>String(n).padStart(2,"0");
+  return `e2-oracle-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`; }
 function doExport(){
-  const json=JSON.stringify(DATA,null,2);
+  const json=JSON.stringify(DATA,null,2), name=exportName();
+  /* Four routes, tried in order. The first that works wins, so a phone that cannot share a file still
+     gets the data out exactly as before. Only the first route carries a filename; the rest are the
+     unchanged fallbacks and must not be removed, because this is the only way the data leaves the app. */
   const share=async()=>{
-    try{ if(navigator.share){ await navigator.share({title:"E2 Model data",text:json}); return; } }catch(e){}
+    try{ const f=new File([json],name,{type:"application/json"});
+         if(navigator.canShare && navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:name}); return; } }catch(e){}
+    try{ if(navigator.share){ await navigator.share({title:name,text:json}); return; } }catch(e){}
     try{ await navigator.clipboard.writeText(json); toast("Copied to clipboard"); }
     catch(e){ openInfoRaw("Export","Select and copy:<br><br><textarea style='width:100%;height:200px'>"+json.replace(/</g,"&lt;")+"</textarea>"); }
   };
