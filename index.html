@@ -173,7 +173,7 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
 <script>
 "use strict";
 const LN2=Math.LN2;
-const APP_VERSION="v40";   // bumped with every release; stored on every log so a reader knows which build produced it
+const APP_VERSION="v42";   // bumped with every release; stored on every log so a reader knows which build produced it
 /* 8.11.2026 LOG COLOURS. Used wherever a log is drawn on a TESTOSTERONE axis, where height is already
    taken by testosterone so the colour has to carry the state.
    Every one is an existing app colour, chosen by Jonas so the chart keeps the app's design: --red for
@@ -588,6 +588,10 @@ function logSnapshot(t){            // t in milliseconds
   const by=aiLoadBy(t, hp.aiHL, null), block=aiBlock(t, hp.aiHL, null, hp.Imax, hp.L50);
   const e2=E2at(t,{Imax:hp.Imax,L50:hp.L50,aiHL:hp.aiHL});
   const e2fn=tt=>E2at(tt,{Imax:hp.Imax,L50:hp.L50,aiHL:hp.aiHL});
+  const blkFn=tt=>aiLoadBy(tt, hp.aiHL, null).anastrozole;                                  // mg anastrozole equivalent on board
+  const pctFn=tt=>100*(1-aiBlock(tt, hp.aiHL, null, hp.Imax, hp.L50));                      // % of production blocked, both drugs
+  const ftFn=tt=>{ const TT=Tat(tt); return TT*freeT(TT,shbgAt(tt))/100; };                 // free testosterone, nmol/L
+  const xFn=tt=>Tat(tt)/30;                                                                 // multiple of the top of normal
   return {
     app_cache_version: APP_VERSION,
     snapshot_taken_at: new Date().toISOString(),
@@ -627,15 +631,37 @@ function logSnapshot(t){            // t in milliseconds
       vermeulen_shbg_binding_constant: M.Kt,
       vermeulen_albumin_binding_constant: M.Kalb
     },
-    // ---- SECONDARY, exploratory, not primary information ----
+    /* ---- SECONDARY, exploratory, not primary information ----
+       SIX measures over each of three windows (2, 4 and 8 h), eighteen fields. They are a set, not a menu:
+       estradiol is production MINUS block, so an estradiol average is uninterpretable without the block
+       average over the same window. Free testosterone is what convF() reads; the multiple is what CAL_X is
+       measured against; total testosterone alone is neither. Anything added here must be added for all
+       three windows, or the set stops being comparable across windows. */
     secondary_rolling_averages: {
-      note: "Exploratory only. Stored so the averaging window that best matches his felt state can be found later from the data.",
+      note: "Exploratory only. Stored so the averaging window that best matches his felt state can be found later from the data. SIX measures over each of 2, 4 and 8 hours. Read them together: estradiol is production MINUS the inhibitor block, so an estradiol average cannot be interpreted without the block average over the SAME window. Free testosterone is what the conversion curve reads; the multiple of top of normal is what the calibrated range is measured against; total testosterone alone covers neither.",
       estradiol_mean_previous_2_hours_pmol: r0(rollingAverage(e2fn,t,2)),
       estradiol_mean_previous_4_hours_pmol: r0(rollingAverage(e2fn,t,4)),
       estradiol_mean_previous_8_hours_pmol: r0(rollingAverage(e2fn,t,8)),
       total_testosterone_mean_previous_2_hours_nmol: r1(rollingAverage(Tat,t,2)),
       total_testosterone_mean_previous_4_hours_nmol: r1(rollingAverage(Tat,t,4)),
-      total_testosterone_mean_previous_8_hours_nmol: r1(rollingAverage(Tat,t,8))
+      total_testosterone_mean_previous_8_hours_nmol: r1(rollingAverage(Tat,t,8)),
+      /* FREE testosterone and the multiple over the same windows. Free is what the conversion curve reads,
+         and the multiple is what CAL_X is measured against, so total alone does not cover either. */
+      free_testosterone_mean_previous_2_hours_nmol: +rollingAverage(ftFn,t,2).toFixed(3),
+      free_testosterone_mean_previous_4_hours_nmol: +rollingAverage(ftFn,t,4).toFixed(3),
+      free_testosterone_mean_previous_8_hours_nmol: +rollingAverage(ftFn,t,8).toFixed(3),
+      testosterone_multiple_of_top_of_normal_mean_previous_2_hours: +rollingAverage(xFn,t,2).toFixed(2),
+      testosterone_multiple_of_top_of_normal_mean_previous_4_hours: +rollingAverage(xFn,t,4).toFixed(2),
+      testosterone_multiple_of_top_of_normal_mean_previous_8_hours: +rollingAverage(xFn,t,8).toFixed(2),
+      /* The inhibitor over the SAME windows. Without it the estradiol averages cannot be used for what
+         they exist for: estradiol is production minus block, so an average of it over four hours confounds
+         the two unless the block over those same four hours is known. */
+      anastrozole_load_mean_previous_2_hours_mg: +rollingAverage(blkFn,t,2).toFixed(4),
+      anastrozole_load_mean_previous_4_hours_mg: +rollingAverage(blkFn,t,4).toFixed(4),
+      anastrozole_load_mean_previous_8_hours_mg: +rollingAverage(blkFn,t,8).toFixed(4),
+      estradiol_production_blocked_percent_mean_previous_2_hours: +rollingAverage(pctFn,t,2).toFixed(1),
+      estradiol_production_blocked_percent_mean_previous_4_hours: +rollingAverage(pctFn,t,4).toFixed(1),
+      estradiol_production_blocked_percent_mean_previous_8_hours: +rollingAverage(pctFn,t,8).toFixed(1)
     }
   };
 }
@@ -1311,12 +1337,12 @@ function renderTest(){
       <div>
         <div class="lab">Total ${iBtn('T')}</div>
         <div class="big" style="font-size:24px;margin-top:4px">${r0(T)}<span class="unit" style="color:var(--text)"> nmol/L</span></div>
-        <div class="mono" style="font-size:11px;margin-top:3px;margin-left:42px;color:#F0C040">${(T/30).toFixed(1)}x</div>
+        <div class="mono" style="font-size:11px;margin-top:3px;margin-left:42px;color:var(--text)">${(T/30).toFixed(1)}X</div>   <!-- 8.11.2026: white so it stands out against the amber card -->
       </div>
       <div style="text-align:right">
         <div class="lab">Free, calc ${iBtn('free')}</div>
         <div class="big" style="font-size:24px;margin-top:4px">${r1(freeAbs)}<span class="unit" style="color:var(--text)"> nmol/L</span></div>
-        <div class="mono" style="font-size:11px;margin-top:3px;margin-right:42px;color:#F0C040">${freeMult.toFixed(1)}x</div>
+        <div class="mono" style="font-size:11px;margin-top:3px;margin-right:42px;color:var(--text)">${freeMult.toFixed(1)}X</div>
       </div>
     </div></div>
     <div class="card"><div class="row"><h2>Testosterone trajectory</h2>${iBtn('tchart')}</div>
@@ -1535,7 +1561,7 @@ let trendsView="tenday";   // 8.11.2026: Week removed; 8 days is the default
 const VIEWS={day:{back:12,fwd:12,label:"Day",marks:true},tenday:{back:96,fwd:96,label:"8 days",marks:true},fortnight:{span:336,label:"14 days",placeable:true},month:{span:768,label:"Month",placeable:true}};   // 8.11.2026: Week removed, redundant beside 8 days. 8 days keeps crossing labels, which Week carried.
 /* 8.11.2026: the two long views carry a span instead of a fixed back/fwd, and winPlace decides where NOW sits inside it.
    "ahead" keeps a small slice of the past so the curve is already arriving at the NOW line instead of starting on it. */
-function winView(){ const v=VIEWS[trendsView]; if(!v.placeable) return v; const s=v.span, edge=Math.round(s*0.08);
+function winView(){ const v=VIEWS[trendsView]; if(!v.placeable) return v; const s=v.span, edge=0;   // 8.11.2026: no edge. Past ends at NOW and Future starts at NOW, so the span is exactly what the label says.
   if(winPlace==="ahead") return {back:edge,fwd:s,label:v.label,placeable:true};
   if(winPlace==="back")  return {back:s,fwd:edge,label:v.label,placeable:true};
   return {back:Math.round(s/2),fwd:Math.round(s/2),label:v.label,placeable:true}; }
