@@ -173,7 +173,7 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
 <script>
 "use strict";
 const LN2=Math.LN2;
-const APP_VERSION="v44";   // bumped with every release; stored on every log so a reader knows which build produced it
+const APP_VERSION="v45";   // bumped with every release; stored on every log so a reader knows which build produced it
 /* 8.11.2026 LOG COLOURS. Used wherever a log is drawn on a TESTOSTERONE axis, where height is already
    taken by testosterone so the colour has to carry the state.
    Every one is an existing app colour, chosen by Jonas so the chart keeps the app's design: --red for
@@ -1568,7 +1568,7 @@ function recentList(){
   return items.slice(0,12).map(i=>`<div class="list-row"><span>${i.txt}</span><span class="faint mono" style="font-size:12px">${fmtDT(i.t)}</span></div>`).join("");
 }
 
-let trendsView="tenday";   // 8.11.2026: Week removed; 8 days is the default
+let trendsView="day";   // 8.11.2026: Day is the default view
 const VIEWS={day:{back:12,fwd:12,label:"Day",marks:true},tenday:{back:96,fwd:96,label:"8 days",marks:true},fortnight:{span:336,label:"14 days",placeable:true},month:{span:768,label:"Month",placeable:true}};   // 8.11.2026: Week removed, redundant beside 8 days. 8 days keeps crossing labels, which Week carried.
 /* 8.11.2026: the two long views carry a span instead of a fixed back/fwd, and winPlace decides where NOW sits inside it.
    "ahead" keeps a small slice of the past so the curve is already arriving at the NOW line instead of starting on it. */
