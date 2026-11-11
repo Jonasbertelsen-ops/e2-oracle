@@ -173,7 +173,7 @@ nav button.on{color:var(--accent);border-top-color:var(--accent);text-shadow:0 0
 <script>
 "use strict";
 const LN2=Math.LN2;
-const APP_VERSION="v45";   // bumped with every release; stored on every log so a reader knows which build produced it
+const APP_VERSION="v46";   // bumped with every release; stored on every log so a reader knows which build produced it
 /* 8.11.2026 LOG COLOURS. Used wherever a log is drawn on a TESTOSTERONE axis, where height is already
    taken by testosterone so the colour has to carry the state.
    Every one is an existing app colour, chosen by Jonas so the chart keeps the app's design: --red for
@@ -1117,7 +1117,7 @@ function renderEstrogen(){
   const t=Date.now(), tr=tracks(t), tn=trendNow(t), hp=tr.his.params, w=hp.w, v=winView();
   const anchor=hp.anchor, cut=cutoffs(anchor,hp.ratio);
     const anchorDep=`<p class="k">Your lines START at fixed values in pmol: crashed 77, Good 105 to 132. They are no longer a ratio of a guessed day. 77 is the floor of the range for men on testosterone, raised a little because yours runs 2 to 3 times ordinary levels. 105 sits between a Low you felt at about 100 and your lowest Good logs at 109. 132 sits between your highest Good log, 126, and your lowest Above-ceiling log, 138.</p>
-    <p class="k">From there each line moves ONLY when a log lands on its wrong side. A log that already agrees moves nothing, however many of them there are, and that holds when a line has logs on one side only. When the line has to move and logs sit on both sides, it goes to the middle of the stretch that disagrees with the fewest of them. Now: ${r0(cut.crbe)} / ${r0(cut.besw)} / ${r0(cut.hiov)} pmol.</p>`;
+    <p class="k">The lines have not moved since and will not while the learning is off: they sit where your archived logs put them. Now: ${r0(cut.crbe)} / ${r0(cut.besw)} / ${r0(cut.hiov)} pmol.</p>`;
   INFO.model={t:"Objective",body:`<p>What a blood test would read, from injections and anastrozole only. It does not know how you feel.</p>
     <p class="k">Low, Normal or High is against MEN ON TESTOSTERONE, not the general male population and not your own states: ${NORM.lo} to ${NORM.hi} pmol/L. ${NORM.hi} is 40 pg/mL, the top of the range used in TRT practice; its bottom is 73 pmol (20 pg/mL), raised to ${NORM.lo} because your testosterone runs 2 to 3 times ordinary TRT levels.</p>
     <p class="k">Be honest about what this is: NO guideline sets an estradiol target for men on testosterone. The Endocrine Society 2018 guideline and the AUA guideline both say treat symptoms, not a number. This range is clinical and community consensus, not trial evidence. The old 40 to 150 was dropped because it described untreated men.</p>
@@ -1125,7 +1125,7 @@ function renderEstrogen(){
     <p class="k">Anchor = ${r0(tr.model.anchor)} pmol/L.</p>${anchorDep}
     <p class="k">Conversion: Lakshman 2010 main finding (about 40% more E2 per doubling of testosterone), on free testosterone at your SHBG, levelling off above the study's range (fitted to your logs, not measured). Body fat: +2% per 10 points of body fat, same study, fixed. FITTED scale. Anastrozole strength and clearance from the literature (clearance ${M.aiHL} h).</p>`};
   INFO.his={t:"Your estimate",body:`<p>The same estradiol number as Objective, in pmol/L, read against YOUR states instead of against other men. Both cards and every line on the chart are in the same unit now, so you can compare them directly.</p>
-    <p class="k">Every log counts the same, one vote. A line goes where the fewest logs disagree with it, and a log sitting exactly on a line disagrees with nothing. A line moves only when moving disagrees with at least ${MOVE_MARGIN} fewer logs than leaving it where it is, so no single log can shift a line. Unsure counts only if it fits your sure logs.</p>
+    <p class="k">Sure or unsure is stored with the log either way. While the learning is off neither changes where a line sits, because no log moves a line. When the learning is on again, every sure log counts the same, one vote, and an unsure log counts only if it fits your sure logs.</p>
     <p class="k">Middle of Good right now: ${r0(hp.anchor)} pmol/L. Anastrozole strength and clearance are LOCKED at the research values (Imax ${r1(hp.Imax)}, L50 ${r1(hp.L50)}, clearance ${r1(hp.aiHL)} h) and no longer learn from your logs.</p>${anchorDep}`};
   INFO.weight={t:"How much is yours",body:`<p>How much evidence your own logs have put into the lines: ${r0(w*100)}% now. The lines move only where a log lands on the wrong side of one, so a high number with no corrections means the starting lines already matched you. Model input weight, not your body weight.</p>
     <p class="k">Every feeling log made before 4.11.2026 was archived: they were collected under earlier rules and were used to set the starting lines, so counting them again would count the same evidence twice. They are kept under Data, Archived (unused), and the model never reads them.</p>`};
@@ -1427,7 +1427,7 @@ function renderLog(){
       <label class="fl"><div class="field-lab">Your words</div><textarea id="lgnote" placeholder="exactly what you notice"></textarea></label>
       ${dtField('lgd','lgt', pendingLogT?isoLocal(pendingLogT).slice(0,10):todayISO(), pendingLogT?isoLocal(pendingLogT).slice(11,16):nowHM())}
       <button class="act sm" style="margin-top:12px" id="saveReport">Save report</button>
-      <div class="notice">Sweet spot and High are one state now, Good: you cannot reliably tell them apart, so a line between them would be learned from guesses. A log that already agrees with the lines changes nothing, and a log sitting exactly on a line disagrees with nothing. A line moves only when moving disagrees with at least 2 fewer logs than leaving it put, so one log on its own never shifts a line. Avoid logging in the hours right after a fast-acting shot: the level crosses before the feeling does.</div>
+      <div class="notice">Your logs do not move the lines at the moment. The lines are frozen at 77 / 105 / 132 pmol while the conversion curve above 3x top of normal is unresolved, so every log is kept as a record and nothing is learned from it. Avoid logging in the hours right after a fast-acting shot: the level crosses before the feeling does.</div>   <!-- 11.11.2026: replaced the learning description. The original is in handover 11.9 and goes back when LEARN_LINES is true -->
     </div>
     <div class="card">
       <h2>Log a blood result</h2>
@@ -2068,7 +2068,7 @@ function showCurve(){
   const hp=hisParams(), vr=hp.vr, bf=bodyfatAt(Date.now()), R=hp.ratio;
   const row=(l,v)=>`<div class="list-row"><span>${l}</span><span class="mono">${v}</span></div>`;
   $("#morepane").innerHTML=`<div class="card"><h2>What the app learns</h2>
-    <p class="sub">Your scale and two anastrozole values learn from your logs. Everything else is fixed from research and corrected only by blood tests.</p>
+    <p class="sub">Nothing learns from your logs at the moment. The state lines are frozen and the anastrozole values were locked to the research figures on 5.11.2026. Everything here is fixed from research, and only a blood test corrects the testosterone scale.</p>   <!-- 11.11.2026: previously "Your scale and two anastrozole values learn from your logs. Everything else is fixed from research and corrected only by blood tests." Restore that when LEARN_LINES is true, minus the anastrozole part, which stays locked. Handover 11.9 -->
     ${row("Middle of Good", `${r0(hp.anchor)} pmol/L, ${r0(hp.w*100)}% from your logs`)}
     ${row("Crashed", `under ${r0(R.crbe*hp.anchor)} pmol`)}
     ${row("Low", `${r0(R.crbe*hp.anchor)} to ${r0(R.besw*hp.anchor)} pmol`)}
@@ -2080,7 +2080,7 @@ function showCurve(){
     ${row("Strength and clearance from your logs", `${r0(hp.wD*100)}%`)}
     ${row("Logs set aside", `${vr.droppedUnsure.length} unsure, ${vr.pendingUnsure.length} waiting`)}
     ${row("Body fat now", bf==null?"not logged":`${r1(bf)}%, curve x ${fatFactor(Date.now()).toFixed(3)}`)}
-    <div class="notice">Lines start at 77 / 105 / 132 pmol. A line goes where the fewest logs disagree with it; a log sitting exactly on a line disagrees with nothing, and a log that agrees moves nothing however many there are. A line moves only when moving disagrees with at least 2 fewer logs than leaving it put, so no single log can shift a line. Logs archived before 4.11.2026 are never read. Anastrozole strength and clearance are locked at the research values.</div></div>`;
+    <div class="notice">LEARNING IS OFF. The lines are fixed at 77 / 105 / 132 pmol and no log moves them. Switched off 8.11.2026: above about 3x top of normal the estradiol estimate reads low, so a log made there would teach a line a number known to be wrong. Your logs are still stored in full and are the data that would correct the curve. The rule that places a line, and the code that runs it, are intact and restorable. Logs archived before 4.11.2026 are never read. Anastrozole strength and clearance are locked at the research values.</div>   <!-- 11.11.2026: original learning text in handover 11.9 --></div>`;
   scrollPane();
 }
 function showChecks(){
